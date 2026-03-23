@@ -68,8 +68,8 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ __('Reset password') }}</h1>
-        <p class="mt-1 text-sm text-slate-600">{{ __('Choose a new password for your account.') }}</p>
+        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Reset password') }}</h1>
+        <p class="mt-1 text-sm text-ink/70">{{ __('Choose a new password for your account.') }}</p>
     </div>
 
     <form wire:submit="resetPassword" class="space-y-4">

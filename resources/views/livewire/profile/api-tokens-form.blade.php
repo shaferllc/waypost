@@ -31,11 +31,11 @@ new class extends Component
 
 <section>
     <header>
-        <h2 class="text-lg font-medium text-gray-900">
+        <h2 class="text-lg font-medium text-ink">
             {{ __('API tokens') }}
         </h2>
 
-        <p class="mt-1 text-sm text-gray-600">
+        <p class="mt-1 text-sm text-ink/70">
             {{ __('Create a token to add wishlist ideas from other apps or a browser extension. Use an Authorization header: Bearer plus your token.') }}
         </p>
     </header>
@@ -43,7 +43,7 @@ new class extends Component
     @if ($plain_text_token)
         <div class="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             <p class="font-medium">{{ __('Copy this token now. You will not see it again.') }}</p>
-            <code class="mt-2 block break-all rounded bg-white p-2 text-xs text-gray-800">{{ $plain_text_token }}</code>
+            <code class="mt-2 block break-all rounded bg-white p-2 text-xs text-ink">{{ $plain_text_token }}</code>
         </div>
     @endif
 
@@ -63,13 +63,13 @@ new class extends Component
         </div>
     </form>
 
-    <ul class="mt-8 divide-y divide-gray-100 border-t border-gray-100 pt-6 text-sm" wire:key="token-list">
+    <ul class="mt-8 divide-y divide-cream-200 border-t border-cream-200 pt-6 text-sm" wire:key="token-list">
         @forelse (Auth::user()->tokens()->orderBy('name')->get() as $token)
             <li class="flex items-center justify-between gap-4 py-3" wire:key="token-{{ $token->id }}">
                 <div>
-                    <span class="font-medium text-gray-900">{{ $token->name }}</span>
+                    <span class="font-medium text-ink">{{ $token->name }}</span>
                     @if ($token->last_used_at)
-                        <p class="text-xs text-gray-500">{{ __('Last used') }} {{ $token->last_used_at->diffForHumans() }}</p>
+                        <p class="text-xs text-ink/55">{{ __('Last used') }} {{ $token->last_used_at->diffForHumans() }}</p>
                     @endif
                 </div>
                 <button
@@ -81,7 +81,7 @@ new class extends Component
                 </button>
             </li>
         @empty
-            <li class="py-3 text-gray-500">{{ __('No tokens yet.') }}</li>
+            <li class="py-3 text-ink/55">{{ __('No tokens yet.') }}</li>
         @endforelse
     </ul>
 </section>

@@ -41,8 +41,8 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ __('Create account') }}</h1>
-        <p class="mt-1 text-sm text-slate-600">{{ __('Start organizing projects on :app.', ['app' => config('app.name')]) }}</p>
+        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Create account') }}</h1>
+        <p class="mt-1 text-sm text-ink/70">{{ __('Start organizing projects on :app.', ['app' => config('app.name')]) }}</p>
     </div>
 
     <form wire:submit="register" class="space-y-4">
@@ -80,7 +80,7 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
 
         <div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
-            <a class="text-center text-sm font-medium text-slate-600 hover:text-slate-900 sm:me-auto sm:text-start" href="{{ route('login') }}" wire:navigate>
+            <a class="text-center text-sm font-medium text-ink/70 hover:text-ink sm:me-auto sm:text-start" href="{{ route('login') }}" wire:navigate>
                 {{ __('Already registered?') }}
             </a>
 

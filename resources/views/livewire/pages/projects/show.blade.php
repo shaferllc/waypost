@@ -598,18 +598,18 @@ class extends Component
                 <a
                     href="{{ route('projects.index') }}"
                     wire:navigate
-                    class="text-sm font-medium text-teal-700 hover:text-teal-800"
+                    class="text-sm font-medium text-sage-dark hover:text-sage-deeper"
                 >
                     ← All projects
                 </a>
-                <h1 class="mt-3 text-3xl font-bold tracking-tight text-slate-900">{{ $this->project->name }}</h1>
+                <h1 class="mt-3 text-3xl font-bold tracking-tight text-ink">{{ $this->project->name }}</h1>
                 @if ($this->project->description)
-                    <p class="mt-2 text-slate-600 max-w-2xl">{{ $this->project->description }}</p>
+                    <p class="mt-2 text-ink/70 max-w-2xl">{{ $this->project->description }}</p>
                 @endif
             </div>
         </div>
 
-        <div class="border-b border-slate-200">
+        <div class="border-b border-cream-300">
             <nav class="-mb-px flex gap-1 overflow-x-auto pb-px" aria-label="Project sections">
                 @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'wishlist' => 'Wishlist', 'links' => 'Links'] as $key => $label)
                     <button
@@ -617,8 +617,8 @@ class extends Component
                         wire:click="$set('tab', '{{ $key }}')"
                         class="shrink-0 rounded-t-lg px-4 py-2.5 text-sm font-semibold transition
                             {{ $this->tab === $key
-                                ? 'bg-white text-teal-800 ring-1 ring-b-0 ring-slate-200'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50' }}"
+                                ? 'bg-white text-sage-deeper ring-1 ring-b-0 ring-cream-300'
+                                : 'text-ink/70 hover:text-ink hover:bg-cream-100' }}"
                     >
                         {{ $label }}
                     </button>
@@ -641,10 +641,10 @@ class extends Component
                                     ->sortBy('position')
                                     ->values();
                             @endphp
-                            <div class="flex w-72 shrink-0 flex-col rounded-xl border border-slate-200 bg-slate-50/80 shadow-sm">
-                                <div class="border-b border-slate-200/80 px-3 py-2">
-                                    <h3 class="text-sm font-semibold text-slate-900">{{ $kanbanLabels[$status] }}</h3>
-                                    <p class="text-xs text-slate-500">{{ $kanbanHints[$status] }}</p>
+                            <div class="flex w-72 shrink-0 flex-col rounded-xl border border-cream-300 bg-cream-100/80 shadow-sm">
+                                <div class="border-b border-cream-300/80 px-3 py-2">
+                                    <h3 class="text-sm font-semibold text-ink">{{ $kanbanLabels[$status] }}</h3>
+                                    <p class="text-xs text-ink/55">{{ $kanbanHints[$status] }}</p>
                                 </div>
                                 <ul
                                     class="flex flex-1 flex-col gap-2 p-2"
@@ -655,23 +655,23 @@ class extends Component
                                         <li
                                             wire:key="kanban-task-{{ $task->id }}"
                                             data-task-id="{{ $task->id }}"
-                                            class="flex gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
+                                            class="flex gap-2 rounded-lg border border-cream-300 bg-white p-2 shadow-sm"
                                         >
                                             <span
-                                                class="kanban-card-handle cursor-grab select-none rounded px-0.5 py-1 text-slate-400 hover:bg-slate-100 active:cursor-grabbing"
+                                                class="kanban-card-handle cursor-grab select-none rounded px-0.5 py-1 text-ink/40 hover:bg-cream-200 active:cursor-grabbing"
                                                 title="Drag to move"
                                             >⋮⋮</span>
                                             <div class="min-w-0 flex-1">
-                                                <p class="font-medium text-slate-900 text-sm">{{ $task->title }}</p>
+                                                <p class="font-medium text-ink text-sm">{{ $task->title }}</p>
                                                 @if ($task->body)
-                                                    <p class="mt-1 text-xs text-slate-600 line-clamp-3">{{ $task->body }}</p>
+                                                    <p class="mt-1 text-xs text-ink/70 line-clamp-3">{{ $task->body }}</p>
                                                 @endif
                                                 @if ($task->version)
-                                                    <p class="mt-2 text-[10px] font-semibold uppercase tracking-wide text-teal-700">
+                                                    <p class="mt-2 text-[10px] font-semibold uppercase tracking-wide text-sage-dark">
                                                         {{ $task->version->name }}
                                                     </p>
                                                 @endif
-                                                <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                                <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink/55">
                                                     @if ($task->comments_count > 0)
                                                         <span>{{ $task->comments_count }} {{ $task->comments_count === 1 ? 'comment' : 'comments' }}</span>
                                                     @endif
@@ -683,7 +683,7 @@ class extends Component
                                             <button
                                                 type="button"
                                                 wire:click.stop="openTaskDetail({{ $task->id }})"
-                                                class="shrink-0 self-start rounded-md px-2 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50"
+                                                class="shrink-0 self-start rounded-md px-2 py-1 text-xs font-semibold text-sage-dark hover:bg-sage-light/10"
                                             >
                                                 Open
                                             </button>
@@ -695,17 +695,17 @@ class extends Component
                     </div>
                 </div>
 
-                <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-                    <h2 class="text-lg font-semibold text-slate-900">Add card</h2>
-                    <p class="mt-1 text-sm text-slate-500">New tasks start in a column of your choice. Optionally tie them to a roadmap version.</p>
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <h2 class="text-lg font-semibold text-ink">Add card</h2>
+                    <p class="mt-1 text-sm text-ink/55">New tasks start in a column of your choice. Optionally tie them to a roadmap version.</p>
                     <form wire:submit="addTask" class="mt-4 grid gap-4 sm:grid-cols-2">
                         <div class="sm:col-span-2">
-                            <label for="taskTitle" class="block text-xs font-medium text-slate-600">Title</label>
+                            <label for="taskTitle" class="block text-xs font-medium text-ink/70">Title</label>
                             <input
                                 wire:model="taskTitle"
                                 id="taskTitle"
                                 type="text"
-                                class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                                 required
                             />
                             @error('taskTitle')
@@ -713,23 +713,23 @@ class extends Component
                             @enderror
                         </div>
                         <div class="sm:col-span-2">
-                            <label for="taskBody" class="block text-xs font-medium text-slate-600">Notes</label>
+                            <label for="taskBody" class="block text-xs font-medium text-ink/70">Notes</label>
                             <textarea
                                 wire:model="taskBody"
                                 id="taskBody"
                                 rows="2"
-                                class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                             ></textarea>
                             @error('taskBody')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
-                            <label for="newTaskStatus" class="block text-xs font-medium text-slate-600">Column</label>
+                            <label for="newTaskStatus" class="block text-xs font-medium text-ink/70">Column</label>
                             <select
                                 wire:model="newTaskStatus"
                                 id="newTaskStatus"
-                                class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                             >
                                 @foreach (Task::KANBAN_STATUSES as $st)
                                     <option value="{{ $st }}">{{ $kanbanLabels[$st] }}</option>
@@ -740,11 +740,11 @@ class extends Component
                             @enderror
                         </div>
                         <div>
-                            <label for="newTaskVersionId" class="block text-xs font-medium text-slate-600">Roadmap version <span class="font-normal text-slate-400">(optional)</span></label>
+                            <label for="newTaskVersionId" class="block text-xs font-medium text-ink/70">Roadmap version <span class="font-normal text-ink/40">(optional)</span></label>
                             <select
                                 wire:model.live="newTaskVersionId"
                                 id="newTaskVersionId"
-                                class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                             >
                                 <option value="">— None —</option>
                                 @foreach ($this->project->versions as $v)
@@ -758,7 +758,7 @@ class extends Component
                         <div class="flex items-end justify-end sm:col-span-2">
                             <button
                                 type="submit"
-                                class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-teal-500"
+                                class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark"
                             >
                                 Add to board
                             </button>
@@ -766,21 +766,21 @@ class extends Component
                     </form>
                 </section>
 
-                <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-                    <h2 class="text-lg font-semibold text-slate-900">All tasks</h2>
-                    <p class="mt-1 text-sm text-slate-500">Remove a card from the project (same as deleting it from the board).</p>
-                    <ul class="mt-4 divide-y divide-slate-100">
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <h2 class="text-lg font-semibold text-ink">All tasks</h2>
+                    <p class="mt-1 text-sm text-ink/55">Remove a card from the project (same as deleting it from the board).</p>
+                    <ul class="mt-4 divide-y divide-cream-200">
                         @foreach ($this->project->tasks->sortBy(fn (Task $t) => [$t->status, $t->position]) as $task)
                             <li wire:key="task-row-{{ $task->id }}" class="flex flex-wrap items-center justify-between gap-2 py-3">
                                 <div class="min-w-0">
-                                    <span class="text-sm font-medium text-slate-900">{{ $task->title }}</span>
-                                    <span class="ms-2 text-xs text-slate-500">{{ $kanbanLabels[$task->status] ?? $task->status }}</span>
+                                    <span class="text-sm font-medium text-ink">{{ $task->title }}</span>
+                                    <span class="ms-2 text-xs text-ink/55">{{ $kanbanLabels[$task->status] ?? $task->status }}</span>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-3">
                                     <button
                                         type="button"
                                         wire:click="openTaskDetail({{ $task->id }})"
-                                        class="text-sm font-medium text-teal-700 hover:text-teal-800"
+                                        class="text-sm font-medium text-sage-dark hover:text-sage-deeper"
                                     >
                                         Details
                                     </button>
@@ -803,17 +803,17 @@ class extends Component
         {{-- Roadmap --}}
         @if ($this->tab === 'roadmap')
             <div class="space-y-8" wire:key="tab-roadmap">
-                <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-                    <h2 class="text-lg font-semibold text-slate-900">Versions & milestones</h2>
-                    <p class="mt-1 text-sm text-slate-500">Plan releases, target dates, and changelog-style notes. Assign tasks to a version below.</p>
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <h2 class="text-lg font-semibold text-ink">Versions & milestones</h2>
+                    <p class="mt-1 text-sm text-ink/55">Plan releases, target dates, and changelog-style notes. Assign tasks to a version below.</p>
 
                     <form wire:submit="addVersion" class="mt-6 grid gap-3 sm:grid-cols-2">
                         <div class="sm:col-span-2">
-                            <label class="block text-xs font-medium text-slate-600">Version name</label>
+                            <label class="block text-xs font-medium text-ink/70">Version name</label>
                             <input
                                 wire:model="versionName"
                                 type="text"
-                                class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                                 placeholder="e.g. 1.0, MVP, March drop"
                                 required
                             />
@@ -822,27 +822,27 @@ class extends Component
                             @enderror
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-600">Target date</label>
+                            <label class="block text-xs font-medium text-ink/70">Target date</label>
                             <input
                                 wire:model="versionTargetDate"
                                 type="date"
-                                class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                             />
                             @error('versionTargetDate')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="block text-xs font-medium text-slate-600">Goals / scope</label>
+                            <label class="block text-xs font-medium text-ink/70">Goals / scope</label>
                             <textarea
                                 wire:model="versionDescription"
                                 rows="2"
-                                class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                                 placeholder="What ships in this version?"
                             ></textarea>
                         </div>
                         <div class="sm:col-span-2 flex justify-end">
-                            <button type="submit" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-teal-500">
+                            <button type="submit" class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark">
                                 Add version
                             </button>
                         </div>
@@ -854,40 +854,40 @@ class extends Component
                         $editing = $this->project->versions->firstWhere('id', $editingVersionId);
                     @endphp
                     @if ($editing)
-                        <section class="rounded-2xl border-2 border-teal-200 bg-teal-50/40 p-6 shadow-sm" wire:key="edit-version-{{ $editingVersionId }}">
+                        <section class="rounded-2xl border-2 border-sage-light/60 bg-sage-light/10 p-6 shadow-sm" wire:key="edit-version-{{ $editingVersionId }}">
                             <div class="flex items-start justify-between gap-4">
-                                <h3 class="text-lg font-semibold text-slate-900">Edit version</h3>
-                                <button type="button" wire:click="cancelEditVersion" class="text-sm font-medium text-slate-600 hover:text-slate-900">Cancel</button>
+                                <h3 class="text-lg font-semibold text-ink">Edit version</h3>
+                                <button type="button" wire:click="cancelEditVersion" class="text-sm font-medium text-ink/70 hover:text-ink">Cancel</button>
                             </div>
                             <form wire:submit="saveEditVersion" class="mt-4 space-y-3">
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-600">Name</label>
-                                    <input wire:model="editVersionName" type="text" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500" required />
+                                    <label class="block text-xs font-medium text-ink/70">Name</label>
+                                    <input wire:model="editVersionName" type="text" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage" required />
                                     @error('editVersionName')
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
                                 <div class="grid gap-3 sm:grid-cols-2">
                                     <div>
-                                        <label class="block text-xs font-medium text-slate-600">Target date</label>
-                                        <input wire:model="editVersionTargetDate" type="date" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm" />
+                                        <label class="block text-xs font-medium text-ink/70">Target date</label>
+                                        <input wire:model="editVersionTargetDate" type="date" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" />
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-medium text-slate-600">Released on</label>
-                                        <input wire:model="editVersionReleasedAt" type="date" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm" />
-                                        <p class="mt-1 text-xs text-slate-500">Set when this version shipped (changelog).</p>
+                                        <label class="block text-xs font-medium text-ink/70">Released on</label>
+                                        <input wire:model="editVersionReleasedAt" type="date" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" />
+                                        <p class="mt-1 text-xs text-ink/55">Set when this version shipped (changelog).</p>
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-600">Goals / scope</label>
-                                    <textarea wire:model="editVersionDescription" rows="2" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm"></textarea>
+                                    <label class="block text-xs font-medium text-ink/70">Goals / scope</label>
+                                    <textarea wire:model="editVersionDescription" rows="2" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm"></textarea>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-600">Release notes</label>
-                                    <textarea wire:model="editVersionReleaseNotes" rows="4" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm" placeholder="What changed? Bullet list is fine."></textarea>
+                                    <label class="block text-xs font-medium text-ink/70">Release notes</label>
+                                    <textarea wire:model="editVersionReleaseNotes" rows="4" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" placeholder="What changed? Bullet list is fine."></textarea>
                                 </div>
                                 <div class="flex justify-end gap-2">
-                                    <button type="submit" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-teal-500">
+                                    <button type="submit" class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark">
                                         Save version
                                     </button>
                                 </div>
@@ -896,16 +896,16 @@ class extends Component
                     @endif
                 @endif
 
-                <div class="relative space-y-6 pl-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-slate-200">
+                <div class="relative space-y-6 pl-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-cream-300">
                     @forelse ($this->project->versions as $version)
-                        <article wire:key="version-{{ $version->id }}" class="relative rounded-2xl border border-slate-200 bg-white p-5 shadow-sm pl-6">
-                            <span class="absolute -left-[1.15rem] top-6 flex h-3 w-3 rounded-full border-2 border-white bg-teal-500 ring-2 ring-slate-200"></span>
+                        <article wire:key="version-{{ $version->id }}" class="relative rounded-2xl border border-cream-300 bg-white p-5 shadow-sm pl-6">
+                            <span class="absolute -left-[1.15rem] top-6 flex h-3 w-3 rounded-full border-2 border-white bg-sage-light ring-2 ring-cream-300"></span>
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-slate-900">{{ $version->name }}</h3>
-                                    <div class="mt-1 flex flex-wrap gap-2 text-xs text-slate-600">
+                                    <h3 class="text-lg font-semibold text-ink">{{ $version->name }}</h3>
+                                    <div class="mt-1 flex flex-wrap gap-2 text-xs text-ink/70">
                                         @if ($version->target_date)
-                                            <span class="rounded-full bg-slate-100 px-2 py-0.5 font-medium">Target {{ $version->target_date->format('M j, Y') }}</span>
+                                            <span class="rounded-full hover:bg-cream-200 px-2 py-0.5 font-medium">Target {{ $version->target_date->format('M j, Y') }}</span>
                                         @endif
                                         @if ($version->released_at)
                                             <span class="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900">Released {{ $version->released_at->format('M j, Y') }}</span>
@@ -914,10 +914,10 @@ class extends Component
                                         @endif
                                     </div>
                                     @if ($version->description)
-                                        <p class="mt-3 text-sm text-slate-600">{{ $version->description }}</p>
+                                        <p class="mt-3 text-sm text-ink/70">{{ $version->description }}</p>
                                     @endif
                                     @if ($version->release_notes && $version->released_at)
-                                        <div class="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap">{{ $version->release_notes }}</div>
+                                        <div class="mt-4 rounded-lg bg-cream-100 p-3 text-sm text-ink whitespace-pre-wrap">{{ $version->release_notes }}</div>
                                     @endif
                                 </div>
                                 <div class="flex flex-wrap gap-2">
@@ -933,12 +933,12 @@ class extends Component
                                         <button
                                             type="button"
                                             wire:click="unshipVersion({{ $version->id }})"
-                                            class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                            class="rounded-lg border border-cream-300 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-cream-100"
                                         >
                                             Clear release date
                                         </button>
                                     @endif
-                                    <button type="button" wire:click="startEditVersion({{ $version->id }})" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                                    <button type="button" wire:click="startEditVersion({{ $version->id }})" class="rounded-lg border border-cream-300 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-cream-100">
                                         Edit
                                     </button>
                                     <button
@@ -953,28 +953,28 @@ class extends Component
                             </div>
                             @php $vTasks = $this->project->tasks->where('version_id', $version->id)->sortBy('position'); @endphp
                             @if ($vTasks->isNotEmpty())
-                                <ul class="mt-4 space-y-1 border-t border-slate-100 pt-4">
+                                <ul class="mt-4 space-y-1 border-t border-cream-200 pt-4">
                                     @foreach ($vTasks as $vt)
-                                        <li class="text-sm text-slate-700">• {{ $vt->title }}</li>
+                                        <li class="text-sm text-ink">• {{ $vt->title }}</li>
                                     @endforeach
                                 </ul>
                             @endif
                         </article>
                     @empty
-                        <p class="text-sm text-slate-500 pl-4">No versions yet. Add one to build your roadmap timeline.</p>
+                        <p class="text-sm text-ink/55 pl-4">No versions yet. Add one to build your roadmap timeline.</p>
                     @endforelse
                 </div>
 
-                <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-                    <h2 class="text-lg font-semibold text-slate-900">Assign tasks to versions</h2>
-                    <p class="mt-1 text-sm text-slate-500">Connect board work to planned releases.</p>
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <h2 class="text-lg font-semibold text-ink">Assign tasks to versions</h2>
+                    <p class="mt-1 text-sm text-ink/55">Connect board work to planned releases.</p>
                     <ul class="mt-4 space-y-3">
                         @foreach ($this->project->tasks as $task)
                             <li wire:key="assign-{{ $task->id }}" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" x-data>
-                                <span class="text-sm font-medium text-slate-900">{{ $task->title }}</span>
+                                <span class="text-sm font-medium text-ink">{{ $task->title }}</span>
                                 <select
                                     x-on:change="$wire.assignTaskToVersion({{ $task->id }}, $event.target.value)"
-                                    class="rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:max-w-xs sm:min-w-[12rem]"
+                                    class="rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage sm:max-w-xs sm:min-w-[12rem]"
                                 >
                                     <option value="" @selected($task->version_id === null)>Unscheduled</option>
                                     @foreach ($this->project->versions as $v)
@@ -985,7 +985,7 @@ class extends Component
                         @endforeach
                     </ul>
                     @if ($this->project->tasks->isEmpty())
-                        <p class="mt-2 text-sm text-slate-500">Add tasks on the Board tab first.</p>
+                        <p class="mt-2 text-sm text-ink/55">Add tasks on the Board tab first.</p>
                     @endif
                 </section>
             </div>
@@ -994,23 +994,23 @@ class extends Component
         {{-- Wishlist --}}
         @if ($this->tab === 'wishlist')
             <div class="space-y-6" wire:key="tab-wishlist">
-                <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-                    <h2 class="text-lg font-semibold text-slate-900">Wishlist & ideas</h2>
-                    <p class="mt-1 text-sm text-slate-500">Capture “maybe later” items. Promote any idea to a backlog card when you are ready to build it.</p>
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <h2 class="text-lg font-semibold text-ink">Wishlist & ideas</h2>
+                    <p class="mt-1 text-sm text-ink/55">Capture “maybe later” items. Promote any idea to a backlog card when you are ready to build it.</p>
                     <form wire:submit="addWishlist" class="mt-6 space-y-3">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600">Idea</label>
-                            <input wire:model="wishTitle" type="text" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500" required />
+                            <label class="block text-xs font-medium text-ink/70">Idea</label>
+                            <input wire:model="wishTitle" type="text" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage" required />
                             @error('wishTitle')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-600">Notes</label>
-                            <textarea wire:model="wishNotes" rows="2" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm"></textarea>
+                            <label class="block text-xs font-medium text-ink/70">Notes</label>
+                            <textarea wire:model="wishNotes" rows="2" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm"></textarea>
                         </div>
                         <div class="flex justify-end">
-                            <button type="submit" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-teal-500">Add idea</button>
+                            <button type="submit" class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark">Add idea</button>
                         </div>
                     </form>
                 </section>
@@ -1019,19 +1019,19 @@ class extends Component
                     @forelse ($this->project->wishlistItems as $item)
                         <li
                             wire:key="wish-{{ $item->id }}"
-                            class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                            class="flex flex-col gap-3 rounded-xl border border-cream-300 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
                         >
                             <div class="min-w-0">
-                                <p class="font-medium text-slate-900">{{ $item->title }}</p>
+                                <p class="font-medium text-ink">{{ $item->title }}</p>
                                 @if ($item->notes)
-                                    <p class="mt-1 text-sm text-slate-600">{{ $item->notes }}</p>
+                                    <p class="mt-1 text-sm text-ink/70">{{ $item->notes }}</p>
                                 @endif
                             </div>
                             <div class="flex shrink-0 flex-wrap gap-2">
                                 <button
                                     type="button"
                                     wire:click="promoteWishlistToTask({{ $item->id }})"
-                                    class="rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-teal-500"
+                                    class="rounded-lg bg-sage px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark"
                                 >
                                     Promote to task
                                 </button>
@@ -1046,7 +1046,7 @@ class extends Component
                             </div>
                         </li>
                     @empty
-                        <li class="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 py-12 text-center text-sm text-slate-600">The wishlist is empty.</li>
+                        <li class="rounded-xl border border-dashed border-cream-300 bg-cream-100/80 py-12 text-center text-sm text-ink/70">The wishlist is empty.</li>
                     @endforelse
                 </ul>
             </div>
@@ -1055,38 +1055,38 @@ class extends Component
         {{-- Links --}}
         @if ($this->tab === 'links')
             <div class="max-w-xl space-y-6" wire:key="tab-links">
-                <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
-                    <h2 class="text-lg font-semibold text-slate-900">Links</h2>
-                    <p class="mt-1 text-sm text-slate-500">Repos, docs, designs, trackers.</p>
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <h2 class="text-lg font-semibold text-ink">Links</h2>
+                    <p class="mt-1 text-sm text-ink/55">Repos, docs, designs, trackers.</p>
                     <form wire:submit="addLink" class="mt-6 space-y-3">
                         <div>
-                            <label for="linkTitle" class="block text-xs font-medium text-slate-600">Label</label>
-                            <input wire:model="linkTitle" id="linkTitle" type="text" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500" required />
+                            <label for="linkTitle" class="block text-xs font-medium text-ink/70">Label</label>
+                            <input wire:model="linkTitle" id="linkTitle" type="text" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage" required />
                             @error('linkTitle')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
-                            <label for="linkUrl" class="block text-xs font-medium text-slate-600">URL</label>
-                            <input wire:model="linkUrl" id="linkUrl" type="url" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500" required />
+                            <label for="linkUrl" class="block text-xs font-medium text-ink/70">URL</label>
+                            <input wire:model="linkUrl" id="linkUrl" type="url" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage" required />
                             @error('linkUrl')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
                         <div class="flex justify-end">
-                            <button type="submit" class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-slate-700">Add link</button>
+                            <button type="submit" class="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-cream-50 shadow hover:bg-umber">Add link</button>
                         </div>
                     </form>
                     <ul class="mt-6 space-y-2">
                         @forelse ($this->project->links as $link)
-                            <li wire:key="link-{{ $link->id }}" class="flex items-start justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
-                                <a href="{{ $link->url }}" target="_blank" rel="noopener noreferrer" class="min-w-0 text-sm font-medium text-teal-700 hover:underline">
+                            <li wire:key="link-{{ $link->id }}" class="flex items-start justify-between gap-2 rounded-lg border border-cream-200 bg-cream-100/80 px-3 py-2">
+                                <a href="{{ $link->url }}" target="_blank" rel="noopener noreferrer" class="min-w-0 text-sm font-medium text-sage-dark hover:underline">
                                     {{ $link->title }}
                                 </a>
-                                <button type="button" wire:click="deleteLink({{ $link->id }})" wire:confirm="Remove this link?" class="shrink-0 text-xs text-slate-500 hover:text-red-600">×</button>
+                                <button type="button" wire:click="deleteLink({{ $link->id }})" wire:confirm="Remove this link?" class="shrink-0 text-xs text-ink/55 hover:text-red-600">×</button>
                             </li>
                         @empty
-                            <li class="py-6 text-center text-sm text-slate-500">No links yet.</li>
+                            <li class="py-6 text-center text-sm text-ink/55">No links yet.</li>
                         @endforelse
                     </ul>
                 </section>
@@ -1098,21 +1098,21 @@ class extends Component
         @php $ft = $this->focusedTask; @endphp
         <div class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center" role="dialog" aria-modal="true">
             <div
-                class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+                class="absolute inset-0 bg-ink/50 backdrop-blur-sm"
                 wire:click="closeTaskDetail"
             ></div>
-            <div class="relative flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white shadow-xl">
-                <div class="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+            <div class="relative flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-cream-300 bg-white shadow-xl">
+                <div class="flex items-start justify-between gap-4 border-b border-cream-200 px-5 py-4">
                     <div class="min-w-0">
-                        <h2 class="text-lg font-bold text-slate-900">{{ $ft->title }}</h2>
+                        <h2 class="text-lg font-bold text-ink">{{ $ft->title }}</h2>
                         @if ($ft->version)
-                            <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-teal-700">{{ $ft->version->name }}</p>
+                            <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-sage-dark">{{ $ft->version->name }}</p>
                         @endif
                     </div>
                     <button
                         type="button"
                         wire:click="closeTaskDetail"
-                        class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                        class="rounded-lg p-2 text-ink/55 hover:bg-cream-200 hover:text-ink"
                     >
                         <span class="sr-only">Close</span>
                         ×
@@ -1121,26 +1121,26 @@ class extends Component
                 <div class="flex-1 overflow-y-auto px-5 py-4 space-y-6">
                     @if ($ft->body)
                         <div>
-                            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Description</h3>
-                            <p class="mt-1 text-sm text-slate-700 whitespace-pre-wrap">{{ $ft->body }}</p>
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Description</h3>
+                            <p class="mt-1 text-sm text-ink whitespace-pre-wrap">{{ $ft->body }}</p>
                         </div>
                     @endif
 
                     <div>
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Linked tasks</h3>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Linked tasks</h3>
                         <ul class="mt-2 space-y-2 text-sm">
                             @foreach ($ft->linksAsSource as $link)
                                 @if ($link->type === TaskLink::TYPE_RELATES)
-                                    <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                                        <span><span class="text-slate-500">Related to</span>
-                                            <button type="button" wire:click="openTaskDetail({{ $link->target_id }})" class="ms-1 font-medium text-teal-700 hover:underline">{{ $link->target->title }}</button>
+                                    <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-cream-100 px-3 py-2">
+                                        <span><span class="text-ink/55">Related to</span>
+                                            <button type="button" wire:click="openTaskDetail({{ $link->target_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->target->title }}</button>
                                         </span>
                                         <button type="button" wire:click="deleteTaskLink({{ $link->id }})" class="text-xs text-red-600 hover:underline">Remove</button>
                                     </li>
                                 @else
                                     <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50/80 px-3 py-2">
-                                        <span><span class="text-slate-600">Blocks</span>
-                                            <button type="button" wire:click="openTaskDetail({{ $link->target_id }})" class="ms-1 font-medium text-teal-700 hover:underline">{{ $link->target->title }}</button>
+                                        <span><span class="text-ink/70">Blocks</span>
+                                            <button type="button" wire:click="openTaskDetail({{ $link->target_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->target->title }}</button>
                                         </span>
                                         <button type="button" wire:click="deleteTaskLink({{ $link->id }})" class="text-xs text-red-600 hover:underline">Remove</button>
                                     </li>
@@ -1148,16 +1148,16 @@ class extends Component
                             @endforeach
                             @foreach ($ft->linksAsTarget as $link)
                                 @if ($link->type === TaskLink::TYPE_RELATES)
-                                    <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                                        <span><span class="text-slate-500">Related to</span>
-                                            <button type="button" wire:click="openTaskDetail({{ $link->source_id }})" class="ms-1 font-medium text-teal-700 hover:underline">{{ $link->source->title }}</button>
+                                    <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-cream-100 px-3 py-2">
+                                        <span><span class="text-ink/55">Related to</span>
+                                            <button type="button" wire:click="openTaskDetail({{ $link->source_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->source->title }}</button>
                                         </span>
                                         <button type="button" wire:click="deleteTaskLink({{ $link->id }})" class="text-xs text-red-600 hover:underline">Remove</button>
                                     </li>
                                 @else
                                     <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-red-50/60 px-3 py-2">
-                                        <span><span class="text-slate-600">Blocked by</span>
-                                            <button type="button" wire:click="openTaskDetail({{ $link->source_id }})" class="ms-1 font-medium text-teal-700 hover:underline">{{ $link->source->title }}</button>
+                                        <span><span class="text-ink/70">Blocked by</span>
+                                            <button type="button" wire:click="openTaskDetail({{ $link->source_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->source->title }}</button>
                                         </span>
                                         <button type="button" wire:click="deleteTaskLink({{ $link->id }})" class="text-xs text-red-600 hover:underline">Remove</button>
                                     </li>
@@ -1165,7 +1165,7 @@ class extends Component
                             @endforeach
                         </ul>
                         @if ($ft->linksAsSource->isEmpty() && $ft->linksAsTarget->isEmpty())
-                            <p class="mt-1 text-sm text-slate-500">No links yet.</p>
+                            <p class="mt-1 text-sm text-ink/55">No links yet.</p>
                         @endif
 
                         <form wire:submit="addTaskLink" class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
@@ -1173,7 +1173,7 @@ class extends Component
                                 <label class="sr-only">Other task</label>
                                 <select
                                     wire:model="linkTargetTaskId"
-                                    class="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                    class="block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                                 >
                                     <option value="">Choose task…</option>
                                     @foreach ($this->project->tasks as $ot)
@@ -1188,24 +1188,24 @@ class extends Component
                             </div>
                             <div>
                                 <label class="sr-only">Link type</label>
-                                <select wire:model="linkType" class="block w-full rounded-lg border-slate-300 text-sm shadow-sm sm:w-40">
+                                <select wire:model="linkType" class="block w-full rounded-lg border-cream-300 text-sm shadow-sm sm:w-40">
                                     <option value="{{ TaskLink::TYPE_RELATES }}">Related</option>
                                     <option value="{{ TaskLink::TYPE_BLOCKS }}">This blocks that</option>
                                 </select>
                             </div>
-                            <button type="submit" class="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700">Add link</button>
+                            <button type="submit" class="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-cream-50 hover:bg-umber">Add link</button>
                         </form>
                     </div>
 
                     <div>
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Attachments</h3>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Attachments</h3>
                         <ul class="mt-2 space-y-2">
                             @forelse ($ft->attachments as $att)
-                                <li wire:key="att-{{ $att->id }}" class="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
-                                    <a href="{{ route('task-attachments.download', $att) }}" class="min-w-0 truncate font-medium text-teal-700 hover:underline">
+                                <li wire:key="att-{{ $att->id }}" class="flex items-center justify-between gap-2 rounded-lg border border-cream-200 bg-cream-100 px-3 py-2 text-sm">
+                                    <a href="{{ route('task-attachments.download', $att) }}" class="min-w-0 truncate font-medium text-sage-dark hover:underline">
                                         {{ $att->original_name }}
                                     </a>
-                                    <span class="shrink-0 text-xs text-slate-500">{{ \Illuminate\Support\Number::fileSize($att->size) }}</span>
+                                    <span class="shrink-0 text-xs text-ink/55">{{ \Illuminate\Support\Number::fileSize($att->size) }}</span>
                                     <button
                                         type="button"
                                         wire:click="deleteAttachment({{ $att->id }})"
@@ -1216,33 +1216,33 @@ class extends Component
                                     </button>
                                 </li>
                             @empty
-                                <li class="text-sm text-slate-500">No files yet.</li>
+                                <li class="text-sm text-ink/55">No files yet.</li>
                             @endforelse
                         </ul>
                         <form wire:submit="uploadAttachment" class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                             <input
                                 type="file"
                                 wire:model="attachmentFile"
-                                class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-teal-800 hover:file:bg-teal-100"
+                                class="block w-full text-sm text-ink/70 file:mr-3 file:rounded-lg file:border-0 file:bg-sage-light/15 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-sage-deeper hover:file:bg-sage-light/25"
                             />
-                            <button type="submit" class="rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-500">Upload</button>
+                            <button type="submit" class="rounded-lg bg-sage px-3 py-2 text-sm font-semibold text-white hover:bg-sage-dark">Upload</button>
                         </form>
                         @error('attachmentFile')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
-                        <div wire:loading wire:target="attachmentFile" class="mt-1 text-xs text-slate-500">Preparing file…</div>
+                        <div wire:loading wire:target="attachmentFile" class="mt-1 text-xs text-ink/55">Preparing file…</div>
                     </div>
 
                     <div>
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Comments</h3>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Comments</h3>
                         <ul class="mt-2 space-y-3">
                             @forelse ($ft->comments as $comment)
-                                <li wire:key="comment-{{ $comment->id }}" class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
-                                    <div class="flex items-center justify-between gap-2 text-xs text-slate-500">
-                                        <span class="font-medium text-slate-700">{{ $comment->user->name }}</span>
+                                <li wire:key="comment-{{ $comment->id }}" class="rounded-lg border border-cream-200 bg-cream-100/80 px-3 py-2">
+                                    <div class="flex items-center justify-between gap-2 text-xs text-ink/55">
+                                        <span class="font-medium text-ink">{{ $comment->user->name }}</span>
                                         <span>{{ $comment->created_at->diffForHumans() }}</span>
                                     </div>
-                                    <p class="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{{ $comment->body }}</p>
+                                    <p class="mt-1 text-sm text-ink whitespace-pre-wrap">{{ $comment->body }}</p>
                                     @if ($comment->user_id === auth()->id())
                                         <button
                                             type="button"
@@ -1255,20 +1255,20 @@ class extends Component
                                     @endif
                                 </li>
                             @empty
-                                <li class="text-sm text-slate-500">No comments yet.</li>
+                                <li class="text-sm text-ink/55">No comments yet.</li>
                             @endforelse
                         </ul>
                         <form wire:submit="addComment" class="mt-3 space-y-2">
                             <textarea
                                 wire:model="commentBody"
                                 rows="2"
-                                class="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                                class="block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
                                 placeholder="Write a comment…"
                             ></textarea>
                             @error('commentBody')
                                 <p class="text-xs text-red-600">{{ $message }}</p>
                             @enderror
-                            <button type="submit" class="rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-500">Post comment</button>
+                            <button type="submit" class="rounded-lg bg-sage px-3 py-2 text-sm font-semibold text-white hover:bg-sage-dark">Post comment</button>
                         </form>
                     </div>
                 </div>

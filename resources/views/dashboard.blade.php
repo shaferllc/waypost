@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-ink leading-tight">
             {{ __('Overview') }}
         </h2>
     </x-slot>
@@ -15,30 +15,30 @@
             @endphp
 
             <div class="grid gap-4 sm:grid-cols-3">
-                <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <p class="text-sm font-medium text-slate-500">Projects</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $projectCount }}</p>
+                <div class="rounded-xl border border-cream-300 bg-cream-50 p-6 shadow-sm ring-1 ring-ink/5">
+                    <p class="text-sm font-medium text-ink/55">Projects</p>
+                    <p class="mt-2 text-3xl font-bold text-ink">{{ $projectCount }}</p>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <p class="text-sm font-medium text-slate-500">Tasks</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $taskCount }}</p>
+                <div class="rounded-xl border border-cream-300 bg-cream-50 p-6 shadow-sm ring-1 ring-ink/5">
+                    <p class="text-sm font-medium text-ink/55">Tasks</p>
+                    <p class="mt-2 text-3xl font-bold text-ink">{{ $taskCount }}</p>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <p class="text-sm font-medium text-slate-500">Links</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $linkCount }}</p>
+                <div class="rounded-xl border border-cream-300 bg-cream-50 p-6 shadow-sm ring-1 ring-ink/5">
+                    <p class="text-sm font-medium text-ink/55">Links</p>
+                    <p class="mt-2 text-3xl font-bold text-ink">{{ $linkCount }}</p>
                 </div>
             </div>
 
-            <div class="overflow-hidden bg-white shadow-sm sm:rounded-xl border border-slate-200/80">
+            <div class="overflow-hidden bg-cream-50 shadow-sm sm:rounded-xl border border-cream-300/80 ring-1 ring-ink/5">
                 <div class="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-slate-900">Open your roadmap</h3>
-                        <p class="mt-1 text-slate-600">Create projects, track tasks, and keep important URLs together.</p>
+                        <h3 class="text-lg font-semibold text-ink">Open your roadmap</h3>
+                        <p class="mt-1 text-ink/70">Create projects, track tasks, and keep important URLs together.</p>
                     </div>
                     <a
                         href="{{ route('projects.index') }}"
                         wire:navigate
-                        class="inline-flex items-center justify-center rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                        class="inline-flex items-center justify-center rounded-lg bg-sage px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-sage-dark focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
                     >
                         Go to projects
                     </a>

@@ -26,8 +26,8 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ __('Log in') }}</h1>
-        <p class="mt-1 text-sm text-slate-600">{{ __('Welcome back to :app.', ['app' => config('app.name')]) }}</p>
+        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Log in') }}</h1>
+        <p class="mt-1 text-sm text-ink/70">{{ __('Welcome back to :app.', ['app' => config('app.name')]) }}</p>
     </div>
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
@@ -52,14 +52,14 @@ new #[Layout('layouts.guest')] class extends Component
 
         <div class="flex items-center">
             <label for="remember" class="inline-flex items-center">
-                <input wire:model="form.remember" id="remember" type="checkbox" class="rounded border-slate-300 text-teal-600 shadow-sm focus:ring-teal-500" name="remember">
-                <span class="ms-2 text-sm text-slate-600">{{ __('Remember me') }}</span>
+                <input wire:model="form.remember" id="remember" type="checkbox" class="rounded border-cream-300 text-sage shadow-sm focus:ring-sage" name="remember">
+                <span class="ms-2 text-sm text-ink/70">{{ __('Remember me') }}</span>
             </label>
         </div>
 
         <div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
             @if (Route::has('password.request'))
-                <a class="text-center text-sm font-medium text-teal-700 hover:text-teal-800 sm:me-auto sm:text-start" href="{{ route('password.request') }}" wire:navigate>
+                <a class="text-center text-sm font-medium text-sage-dark hover:text-sage-deeper sm:me-auto sm:text-start" href="{{ route('password.request') }}" wire:navigate>
                     {{ __('Forgot your password?') }}
                 </a>
             @endif
@@ -71,9 +71,9 @@ new #[Layout('layouts.guest')] class extends Component
     </form>
 
     @if (Route::has('register'))
-        <p class="mt-8 text-center text-sm text-slate-600">
+        <p class="mt-8 text-center text-sm text-ink/70">
             {{ __('No account yet?') }}
-            <a href="{{ route('register') }}" wire:navigate class="font-semibold text-teal-700 hover:text-teal-800">{{ __('Create one') }}</a>
+            <a href="{{ route('register') }}" wire:navigate class="font-semibold text-sage-dark hover:text-sage-deeper">{{ __('Create one') }}</a>
         </p>
     @endif
 </div>

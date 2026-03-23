@@ -1,15 +1,15 @@
-<nav class="-mx-3 flex flex-1 justify-end">
+<nav class="-mx-3 flex flex-1 justify-end gap-1">
     @auth
         <a
             href="{{ url('/dashboard') }}"
-            class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-ink/80 ring-1 ring-transparent transition hover:text-ink hover:bg-cream-200/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2"
         >
             Dashboard
         </a>
     @else
         <a
             href="{{ route('login') }}"
-            class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-ink/80 ring-1 ring-transparent transition hover:text-ink hover:bg-cream-200/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2"
         >
             Log in
         </a>
@@ -17,7 +17,7 @@
         @if (Route::has('register'))
             <a
                 href="{{ route('register') }}"
-                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+                class="rounded-lg px-3 py-2 text-sm font-medium text-ink/80 ring-1 ring-transparent transition hover:text-ink hover:bg-cream-200/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2"
             >
                 Register
             </a>

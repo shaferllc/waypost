@@ -35,8 +35,8 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ __('Confirm password') }}</h1>
-        <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Confirm password') }}</h1>
+        <p class="mt-2 text-sm text-ink/70 leading-relaxed">
             {{ __('This is a secure area. Please confirm your password before continuing.') }}
         </p>
     </div>

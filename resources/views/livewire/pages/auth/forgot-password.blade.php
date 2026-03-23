@@ -35,8 +35,8 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ __('Forgot password') }}</h1>
-        <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Forgot password') }}</h1>
+        <p class="mt-2 text-sm text-ink/70 leading-relaxed">
             {{ __('No problem. Enter your email and we will send a link to choose a new password.') }}
         </p>
     </div>
@@ -51,7 +51,7 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
 
         <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
-            <a class="text-center text-sm font-medium text-slate-600 hover:text-slate-900 sm:text-start" href="{{ route('login') }}" wire:navigate>
+            <a class="text-center text-sm font-medium text-ink/70 hover:text-ink sm:text-start" href="{{ route('login') }}" wire:navigate>
                 {{ __('← Back to log in') }}
             </a>
 
