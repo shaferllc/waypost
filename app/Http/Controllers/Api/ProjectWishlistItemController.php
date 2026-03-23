@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ProjectWishlistItemController extends Controller
 {
     public function store(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('update', $project);
+        Gate::authorize('update', $project);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
