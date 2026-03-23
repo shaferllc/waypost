@@ -1,5 +1,7 @@
 # Waypost HTTP API
 
+In the app (signed in): open **API docs** in the top nav or go to `/docs/api`.
+
 Personal API for your account: list projects, add **pinned links (URLs)**, **wishlist ideas**, and **tasks** on a board. All routes require a **Sanctum personal access token** (Bearer).
 
 **Local dev login** (`composer setup` or `php artisan db:seed`): `test@example.com` / `password` (see `.env.example`).

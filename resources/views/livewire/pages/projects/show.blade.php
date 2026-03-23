@@ -70,6 +70,12 @@ class extends Component
 
     public string $linkType = 'relates';
 
+    public bool $editingProject = false;
+
+    public string $editProjectName = '';
+
+    public string $editProjectDescription = '';
+
     public function mount(Project $project): void
     {
         $this->authorize('view', $project);
@@ -109,6 +115,39 @@ class extends Component
                 'linksAsTarget.source',
             ])
             ->find($this->focusedTaskId);
+    }
+
+    public function startEditProject(): void
+    {
+        $this->authorize('update', $this->project);
+        $this->editProjectName = $this->project->name;
+        $this->editProjectDescription = (string) ($this->project->description ?? '');
+        $this->editingProject = true;
+    }
+
+    public function cancelEditProject(): void
+    {
+        $this->editingProject = false;
+        $this->reset('editProjectName', 'editProjectDescription');
+    }
+
+    public function saveProject(): void
+    {
+        $this->authorize('update', $this->project);
+
+        $validated = $this->validate([
+            'editProjectName' => ['required', 'string', 'max:120'],
+            'editProjectDescription' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $this->project->update([
+            'name' => $validated['editProjectName'],
+            'description' => $validated['editProjectDescription'] ?: null,
+        ]);
+
+        $this->editingProject = false;
+        $this->reset('editProjectName', 'editProjectDescription');
+        unset($this->project);
     }
 
     public function syncKanban(array $columns): void
@@ -594,7 +633,7 @@ class extends Component
 <div class="py-10 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto space-y-8">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
                 <a
                     href="{{ route('projects.index') }}"
                     wire:navigate
@@ -602,9 +641,69 @@ class extends Component
                 >
                     ← All projects
                 </a>
-                <h1 class="mt-3 text-3xl font-bold tracking-tight text-ink">{{ $this->project->name }}</h1>
-                @if ($this->project->description)
-                    <p class="mt-2 text-ink/70 max-w-2xl">{{ $this->project->description }}</p>
+                @if ($this->editingProject)
+                    <form wire:submit="saveProject" class="mt-3 max-w-2xl space-y-4">
+                        <div>
+                            <label for="editProjectName" class="block text-sm font-medium text-ink">Name</label>
+                            <input
+                                wire:model="editProjectName"
+                                id="editProjectName"
+                                type="text"
+                                class="mt-1 block w-full rounded-lg border-cream-300 shadow-sm focus:border-sage focus:ring-sage"
+                                required
+                            />
+                            @error('editProjectName')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="editProjectDescription" class="block text-sm font-medium text-ink">
+                                Description <span class="text-ink/40 font-normal">(optional)</span>
+                            </label>
+                            <textarea
+                                wire:model="editProjectDescription"
+                                id="editProjectDescription"
+                                rows="3"
+                                class="mt-1 block w-full rounded-lg border-cream-300 shadow-sm focus:border-sage focus:ring-sage"
+                            ></textarea>
+                            @error('editProjectDescription')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button
+                                type="submit"
+                                class="inline-flex items-center rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
+                            >
+                                Save changes
+                            </button>
+                            <button
+                                type="button"
+                                wire:click="cancelEditProject"
+                                class="inline-flex items-center rounded-lg border border-cream-300 bg-cream-50 px-4 py-2 text-sm font-semibold text-ink shadow-sm hover:bg-cream-100"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                @else
+                    <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="min-w-0">
+                            <h1 class="text-3xl font-bold tracking-tight text-ink">{{ $this->project->name }}</h1>
+                            @if ($this->project->description)
+                                <p class="mt-2 text-ink/70 max-w-2xl">{{ $this->project->description }}</p>
+                            @endif
+                        </div>
+                        @can('update', $this->project)
+                            <button
+                                type="button"
+                                wire:click="startEditProject"
+                                class="shrink-0 rounded-lg border border-cream-300 bg-cream-50 px-3 py-2 text-sm font-semibold text-ink shadow-sm hover:bg-cream-100"
+                            >
+                                Edit project
+                            </button>
+                        @endcan
+                    </div>
                 @endif
             </div>
         </div>

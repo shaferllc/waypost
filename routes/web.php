@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\TaskAttachmentDownloadController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -13,6 +14,10 @@ Route::view('dashboard', 'dashboard')
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
+
+Route::get('docs/api', ApiDocsController::class)
+    ->middleware(['auth'])
+    ->name('docs.api');
 
 Volt::route('projects', 'pages.projects.index')
     ->middleware(['auth', 'verified'])

@@ -38,6 +38,11 @@ new class extends Component
         <p class="mt-1 text-sm text-ink/70">
             {{ __('Create a token to add wishlist ideas from other apps or a browser extension. Use an Authorization header: Bearer plus your token.') }}
         </p>
+        <p class="mt-2 text-sm">
+            <a href="{{ route('docs.api') }}" wire:navigate class="font-medium text-sage-dark hover:text-sage-deeper underline">
+                {{ __('View full API documentation') }}
+            </a>
+        </p>
     </header>
 
     @if ($plain_text_token)
