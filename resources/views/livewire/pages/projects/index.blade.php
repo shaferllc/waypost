@@ -20,7 +20,7 @@ class extends Component
     {
         return Auth::user()
             ->projects()
-            ->withCount(['tasks', 'links'])
+            ->withCount(['tasks', 'links', 'versions', 'wishlistItems'])
             ->latest()
             ->get();
     }
@@ -129,6 +129,10 @@ class extends Component
                                 @endif
                                 <p class="mt-2 text-xs text-slate-500">
                                     {{ $project->tasks_count }} {{ $project->tasks_count === 1 ? 'task' : 'tasks' }}
+                                    ·
+                                    {{ $project->versions_count }} {{ $project->versions_count === 1 ? 'version' : 'versions' }}
+                                    ·
+                                    {{ $project->wishlist_items_count }} ideas
                                     ·
                                     {{ $project->links_count }} {{ $project->links_count === 1 ? 'link' : 'links' }}
                                 </p>
