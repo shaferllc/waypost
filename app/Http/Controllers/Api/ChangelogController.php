@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChangelogEntry;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,8 +15,17 @@ class ChangelogController extends Controller
         $limit = min(max((int) $request->query('limit', 40), 1), 100);
         $projectId = $request->query('project_id');
 
+        $accessibleIds = Project::query()
+            ->accessible($request->user())
+            ->pluck('id');
+
         $query = ChangelogEntry::query()
-            ->where('user_id', $request->user()->id)
+            ->where(function ($q) use ($request, $accessibleIds): void {
+                $q->where('user_id', $request->user()->id);
+                if ($accessibleIds->isNotEmpty()) {
+                    $q->orWhereIn('project_id', $accessibleIds);
+                }
+            })
             ->latest();
 
         if ($projectId !== null && $projectId !== '') {

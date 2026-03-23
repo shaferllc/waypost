@@ -1,11 +1,19 @@
 <?php
 
+use App\Http\Controllers\AcceptProjectInvitationController;
 use App\Http\Controllers\ApiDocsController;
+use App\Http\Controllers\ProjectExportController;
+use App\Http\Controllers\PublicRoadmapController;
 use App\Http\Controllers\TaskAttachmentDownloadController;
+use App\Http\Controllers\WaypostManifestController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::view('/', 'welcome');
+
+Route::get('roadmap/{token}', PublicRoadmapController::class)->name('roadmap.public');
+
+Route::get('invitations/{token}', AcceptProjectInvitationController::class)->name('invitations.accept');
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
@@ -27,8 +35,19 @@ Volt::route('projects/{project}', 'pages.projects.show')
     ->middleware(['auth', 'verified'])
     ->name('projects.show');
 
+Route::get('projects/{project}/waypost.json', WaypostManifestController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projects.waypost-manifest');
+
 Route::get('task-attachments/{taskAttachment}/download', TaskAttachmentDownloadController::class)
     ->middleware(['auth', 'verified'])
     ->name('task-attachments.download');
+
+Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::get('projects/{project}/export/tasks.csv', [ProjectExportController::class, 'tasksCsv'])
+        ->name('projects.export.tasks');
+    Route::get('projects/{project}/export/versions/{version}.md', [ProjectExportController::class, 'versionMarkdown'])
+        ->name('projects.export.version');
+});
 
 require __DIR__.'/auth.php';

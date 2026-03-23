@@ -9,13 +9,39 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['project_id', 'version_id', 'title', 'body', 'status', 'position'])]
+#[Fillable([
+    'project_id',
+    'version_id',
+    'theme_id',
+    'assigned_to',
+    'title',
+    'body',
+    'status',
+    'position',
+    'priority',
+    'due_date',
+    'tags',
+])]
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */
     use HasFactory;
 
-    public const KANBAN_STATUSES = ['backlog', 'todo', 'in_progress', 'done'];
+    public const KANBAN_STATUSES = ['backlog', 'todo', 'in_progress', 'in_review', 'done'];
+
+    public const PRIORITY_LOW = 1;
+
+    public const PRIORITY_NORMAL = 2;
+
+    public const PRIORITY_HIGH = 3;
+
+    protected function casts(): array
+    {
+        return [
+            'due_date' => 'date',
+            'tags' => 'array',
+        ];
+    }
 
     public function project(): BelongsTo
     {
@@ -45,5 +71,15 @@ class Task extends Model
     public function linksAsTarget(): HasMany
     {
         return $this->hasMany(TaskLink::class, 'target_task_id');
+    }
+
+    public function theme(): BelongsTo
+    {
+        return $this->belongsTo(RoadmapTheme::class, 'theme_id');
+    }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 }

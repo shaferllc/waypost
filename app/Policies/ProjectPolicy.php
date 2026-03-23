@@ -14,7 +14,8 @@ class ProjectPolicy
 
     public function view(User $user, Project $project): bool
     {
-        return $user->id === $project->user_id;
+        return $this->isOwner($user, $project)
+            || $project->members()->where('user_id', $user->id)->exists();
     }
 
     public function create(User $user): bool
@@ -24,10 +25,26 @@ class ProjectPolicy
 
     public function update(User $user, Project $project): bool
     {
-        return $user->id === $project->user_id;
+        if ($this->isOwner($user, $project)) {
+            return true;
+        }
+
+        $role = $project->members()->where('user_id', $user->id)->value('role');
+
+        return in_array($role, ['editor'], true);
     }
 
     public function delete(User $user, Project $project): bool
+    {
+        return $this->isOwner($user, $project);
+    }
+
+    public function manageSettings(User $user, Project $project): bool
+    {
+        return $this->isOwner($user, $project);
+    }
+
+    private function isOwner(User $user, Project $project): bool
     {
         return $user->id === $project->user_id;
     }

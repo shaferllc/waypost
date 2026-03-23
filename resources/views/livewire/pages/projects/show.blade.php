@@ -625,12 +625,14 @@ class extends Component
         'backlog' => 'Backlog',
         'todo' => 'Ready',
         'in_progress' => 'In progress',
+        'in_review' => 'In review',
         'done' => 'Done',
     ];
     $kanbanHints = [
         'backlog' => 'Ideas & parking lot',
         'todo' => 'Ready to pick up',
         'in_progress' => 'Active work',
+        'in_review' => 'Ready for a final look',
         'done' => 'Shipped in the board',
     ];
 @endphp
@@ -758,6 +760,33 @@ class extends Component
                 @endforeach
             </nav>
         </div>
+
+        @can('view', $this->project)
+            <div class="rounded-xl border border-sage-light/50 bg-sage-light/10 p-4 sm:p-5">
+                <h2 class="text-sm font-semibold text-ink">Sync with Cursor &amp; this directory</h2>
+                <p class="mt-1 text-sm text-ink/70 max-w-3xl">
+                    Save <strong>waypost.json</strong> in your local repo root (same folder you open in Cursor). The MCP server reads it for
+                    <code class="rounded bg-cream-200 px-1 text-xs">api_base</code> and default <code class="rounded bg-cream-200 px-1 text-xs">project_id</code>.
+                    Create an API token under <a href="{{ route('profile') }}" wire:navigate class="text-sage-dark underline font-medium">Profile</a>
+                    and add <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code> to your MCP config (never commit the token).
+                </p>
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <a
+                        href="{{ route('projects.waypost-manifest', $this->project) }}"
+                        download
+                        class="inline-flex items-center rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark"
+                    >
+                        Download waypost.json
+                    </a>
+                    <a href="{{ route('docs.api') }}" wire:navigate class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline">
+                        API &amp; MCP docs
+                    </a>
+                </div>
+                <p class="mt-3 text-xs text-ink/55 font-mono break-all">
+                    MCP env: <span class="select-all">WAYPOST_BASE_URL={{ rtrim(config('app.url'), '/') }}</span>
+                </p>
+            </div>
+        @endcan
 
         {{-- Kanban --}}
         @if ($this->tab === 'board')

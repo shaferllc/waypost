@@ -17,6 +17,8 @@ class extends Component
 
     public string $url = '';
 
+    public ?int $lastCreatedProjectId = null;
+
     #[Computed]
     public function projects()
     {
@@ -37,14 +39,21 @@ class extends Component
             'url' => ['nullable', 'url', 'max:2048'],
         ]);
 
-        Auth::user()->projects()->create([
+        $project = Auth::user()->projects()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?: null,
             'url' => $validated['url'] ?: null,
         ]);
 
+        $this->lastCreatedProjectId = $project->id;
+
         $this->reset('name', 'description', 'url');
         unset($this->projects);
+    }
+
+    public function dismissCreatedBanner(): void
+    {
+        $this->lastCreatedProjectId = null;
     }
 
     public function delete(Project $project): void
@@ -128,6 +137,33 @@ class extends Component
                     </button>
                 </div>
             </form>
+            @if ($this->lastCreatedProjectId)
+                <div
+                    class="mt-6 rounded-xl border border-sage-light/60 bg-sage-light/10 p-4"
+                    wire:key="created-banner-{{ $this->lastCreatedProjectId }}"
+                >
+                    <p class="text-sm font-medium text-ink">Project created.</p>
+                    <p class="mt-1 text-sm text-ink/70">
+                        Download <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> into this repo’s root so Cursor MCP can target this project.
+                    </p>
+                    <div class="mt-3 flex flex-wrap items-center gap-3">
+                        <a
+                            href="{{ route('projects.waypost-manifest', ['project' => $this->lastCreatedProjectId]) }}"
+                            download
+                            class="inline-flex items-center rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark"
+                        >
+                            Download waypost.json
+                        </a>
+                        <button
+                            type="button"
+                            wire:click="dismissCreatedBanner"
+                            class="text-sm font-medium text-ink/70 hover:text-ink"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <div>
