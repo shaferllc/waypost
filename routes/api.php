@@ -10,8 +10,16 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('changelog', [ChangelogController::class, 'index']);
     Route::get('projects', [ProjectController::class, 'index']);
-    Route::get('projects/{project}', [ProjectController::class, 'show']);
-    Route::post('projects/{project}/links', [ProjectLinkController::class, 'store']);
-    Route::post('projects/{project}/tasks', [ProjectTaskController::class, 'store']);
-    Route::post('projects/{project}/wishlist-items', [ProjectWishlistItemController::class, 'store']);
+    Route::get('projects/{project}', [ProjectController::class, 'show'])
+        ->middleware('token.project');
+    Route::post('projects/{project}/links', [ProjectLinkController::class, 'store'])
+        ->middleware('token.project');
+    Route::post('projects/{project}/tasks', [ProjectTaskController::class, 'store'])
+        ->middleware('token.project');
+    Route::patch('projects/{project}/tasks/{task}', [ProjectTaskController::class, 'update'])
+        ->middleware('token.project');
+    Route::delete('projects/{project}/tasks/{task}', [ProjectTaskController::class, 'destroy'])
+        ->middleware('token.project');
+    Route::post('projects/{project}/wishlist-items', [ProjectWishlistItemController::class, 'store'])
+        ->middleware('token.project');
 });

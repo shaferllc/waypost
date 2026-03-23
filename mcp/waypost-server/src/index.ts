@@ -9,6 +9,8 @@ type WaypostManifest = {
   api_base?: string;
   project_id?: number;
   project_name?: string;
+  /** Prefer WAYPOST_API_TOKEN in MCP config; never commit this field. */
+  api_token?: string;
 };
 
 function loadWaypostManifest(): WaypostManifest | null {
@@ -51,11 +53,15 @@ const parsedDefault =
       : NaN;
 const defaultProjectId = Number.isFinite(parsedDefault) ? parsedDefault : undefined;
 
-const token = process.env.WAYPOST_API_TOKEN;
+const token =
+  (process.env.WAYPOST_API_TOKEN && process.env.WAYPOST_API_TOKEN !== ""
+    ? process.env.WAYPOST_API_TOKEN
+    : undefined) ??
+  (typeof manifest?.api_token === "string" && manifest.api_token !== "" ? manifest.api_token : undefined);
 
 if (!token) {
   console.error(
-    "waypost-mcp: set WAYPOST_API_TOKEN (Sanctum token from Waypost → Profile → API tokens). Optional: waypost.json in repo root with api_base + project_id.",
+    "waypost-mcp: set WAYPOST_API_TOKEN, or add api_token to waypost.json (do not commit). Project tokens are created on each Waypost project; waypost.json carries api_base + project_id.",
   );
   process.exit(1);
 }

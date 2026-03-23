@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnforceProjectScopedSanctumToken;
 use App\Models\ChangelogEntry;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
@@ -14,22 +15,37 @@ class ChangelogController extends Controller
     {
         $limit = min(max((int) $request->query('limit', 40), 1), 100);
         $projectId = $request->query('project_id');
+        $user = $request->user();
+        $scopedId = EnforceProjectScopedSanctumToken::scopedProjectIdFromToken($user->currentAccessToken());
 
-        $accessibleIds = Project::query()
-            ->accessible($request->user())
-            ->pluck('id');
+        if ($scopedId !== null) {
+            if (! Project::query()->accessible($user)->whereKey($scopedId)->exists()) {
+                abort(403, 'This API token is limited to a project you cannot access.');
+            }
+            if ($projectId !== null && $projectId !== '' && (int) $projectId !== $scopedId) {
+                abort(403, 'This API token cannot filter changelog by another project.');
+            }
 
-        $query = ChangelogEntry::query()
-            ->where(function ($q) use ($request, $accessibleIds): void {
-                $q->where('user_id', $request->user()->id);
-                if ($accessibleIds->isNotEmpty()) {
-                    $q->orWhereIn('project_id', $accessibleIds);
-                }
-            })
-            ->latest();
+            $query = ChangelogEntry::query()
+                ->where('project_id', $scopedId)
+                ->latest();
+        } else {
+            $accessibleIds = Project::query()
+                ->accessible($user)
+                ->pluck('id');
 
-        if ($projectId !== null && $projectId !== '') {
-            $query->where('project_id', (int) $projectId);
+            $query = ChangelogEntry::query()
+                ->where(function ($q) use ($user, $accessibleIds): void {
+                    $q->where('user_id', $user->id);
+                    if ($accessibleIds->isNotEmpty()) {
+                        $q->orWhereIn('project_id', $accessibleIds);
+                    }
+                })
+                ->latest();
+
+            if ($projectId !== null && $projectId !== '') {
+                $query->where('project_id', (int) $projectId);
+            }
         }
 
         $entries = $query->limit($limit)->get([

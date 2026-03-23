@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ProjectShareToken;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\Request;
 
 class PublicRoadmapController extends Controller
 {
-    public function __invoke(Request $request, string $token): View
+    public function __invoke(string $token): View
     {
         $share = ProjectShareToken::query()->where('token', $token)->firstOrFail();
 

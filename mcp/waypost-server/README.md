@@ -6,15 +6,16 @@ The server talks to Waypost over the **HTTP API** with your **Sanctum personal a
 
 ## Setup
 
-1. In Waypost: **Profile → API tokens** → create a token and copy it.
-2. From this directory:
+1. **Easiest:** open a project in Waypost and use **Sync with Cursor & this directory** — a **project API token** is created automatically (copy once). Download **`waypost.json`** there for `api_base` and `project_id`. Optionally paste the token into `waypost.json` as `api_token` **locally** (never commit), or set **`WAYPOST_API_TOKEN`** in MCP env.
+2. **Alternatively:** **Profile → API tokens** for a token that works on every project you own.
+3. From this directory:
 
    ```bash
    npm install
    npm run build
    ```
 
-3. Note the **absolute path** to `dist/index.js` (e.g. `/Users/you/Projects/waypost/mcp/waypost-server/dist/index.js`).
+4. Note the **absolute path** to `dist/index.js` (e.g. `/Users/you/Projects/waypost/mcp/waypost-server/dist/index.js`).
 
 ## Cursor
 
@@ -38,7 +39,7 @@ Example:
 ```
 
 - **`WAYPOST_BASE_URL`**: Your app URL **without** a trailing slash (same as `APP_URL`).
-- **`WAYPOST_API_TOKEN`**: The plaintext token shown once when you created it in Profile.
+- **`WAYPOST_API_TOKEN`**: Plaintext Sanctum token (project token from the project page, or a Profile token). If omitted, the server can read **`api_token`** from `waypost.json` (still do not commit that file with secrets).
 
 Restart Cursor or reload MCP after changes.
 

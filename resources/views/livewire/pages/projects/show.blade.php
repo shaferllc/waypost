@@ -1,14 +1,20 @@
 <?php
 
 use App\Models\Project;
+use App\Models\ProjectInvitation;
 use App\Models\ProjectLink;
+use App\Models\ProjectShareToken;
+use App\Models\ProjectWebhook;
+use App\Models\RoadmapTheme;
 use App\Models\RoadmapVersion;
 use App\Models\Task;
 use App\Models\TaskAttachment;
 use App\Models\TaskComment;
 use App\Models\TaskLink;
 use App\Models\WishlistItem;
+use App\Services\ProjectCursorTokenIssuer;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -78,26 +84,104 @@ class extends Component
 
     public string $editProjectUrl = '';
 
+    public string $boardSearch = '';
+
+    public string $boardLayout = 'columns';
+
+    public bool $hideShippedVersions = false;
+
+    public string $inviteEmail = '';
+
+    public string $inviteRole = 'editor';
+
+    public string $webhookUrl = '';
+
+    public string $webhookEvents = '';
+
+    public string $shareLinkLabel = '';
+
+    public string $themeName = '';
+
+    public string $themeColor = '#0d9488';
+
+    public int $editTaskPriority = 2;
+
+    public string $editTaskDueDate = '';
+
+    public string $editTaskTags = '';
+
+    public ?int $editTaskAssigneeId = null;
+
+    public ?int $editTaskThemeId = null;
+
+    public ?string $revealedCursorToken = null;
+
     public function mount(Project $project): void
     {
         $this->authorize('view', $project);
         $this->projectId = $project->id;
+
+        $issuer = app(ProjectCursorTokenIssuer::class);
+        if (Gate::allows('update', $project) && ! $issuer->hasTokenForProject(auth()->user(), $project)) {
+            $this->revealedCursorToken = $issuer->issue($project, auth()->user());
+        }
     }
 
     #[Computed]
     public function project(): Project
     {
         return Project::query()
+            ->accessible(auth()->user())
             ->whereKey($this->projectId)
-            ->where('user_id', auth()->id())
             ->with([
-                'tasks' => fn ($query) => $query->with(['version'])
-                    ->withCount(['attachments', 'comments']),
+                'user',
+                'members',
+                'themes',
+                'invitations',
+                'shareTokens',
+                'webhooks',
+                'tasks' => fn ($query) => $query
+                    ->with(['version', 'theme', 'assignee'])
+                    ->withCount(['attachments', 'comments'])
+                    ->withCount([
+                        'linksAsTarget as blocking_links_count' => fn ($q) => $q->where('type', TaskLink::TYPE_BLOCKS),
+                    ]),
                 'links',
                 'versions',
                 'wishlistItems',
             ])
             ->firstOrFail();
+    }
+
+    #[Computed]
+    public function boardTasks()
+    {
+        $needle = mb_strtolower(trim($this->boardSearch));
+
+        return $this->project->tasks->filter(function (Task $t) use ($needle) {
+            if ($needle === '') {
+                return true;
+            }
+
+            if (mb_stripos($t->title, $needle) !== false) {
+                return true;
+            }
+
+            $body = (string) ($t->body ?? '');
+
+            return $body !== '' && mb_stripos($body, $needle) !== false;
+        });
+    }
+
+    /**
+     * @return list<int>
+     */
+    #[Computed]
+    public function assigneeUserIds(): array
+    {
+        $ids = $this->project->members->pluck('id')->push($this->project->user_id)->unique()->values()->all();
+
+        return array_map(intval(...), $ids);
     }
 
     #[Computed]
@@ -111,6 +195,8 @@ class extends Component
             ->where('project_id', $this->projectId)
             ->with([
                 'version',
+                'theme',
+                'assignee',
                 'attachments',
                 'comments.user',
                 'linksAsSource.target',
@@ -241,6 +327,15 @@ class extends Component
         $this->focusedTaskId = $taskId;
         $this->reset('commentBody', 'attachmentFile', 'linkTargetTaskId');
         $this->linkType = 'relates';
+        $task = Task::query()->where('project_id', $this->projectId)->find($taskId);
+        if ($task) {
+            $this->editTaskPriority = (int) $task->priority;
+            $this->editTaskDueDate = $task->due_date?->format('Y-m-d') ?? '';
+            $tags = $task->tags;
+            $this->editTaskTags = is_array($tags) ? implode(', ', $tags) : '';
+            $this->editTaskAssigneeId = $task->assigned_to;
+            $this->editTaskThemeId = $task->theme_id;
+        }
         unset($this->focusedTask);
     }
 
@@ -249,7 +344,45 @@ class extends Component
         $this->focusedTaskId = null;
         $this->reset('commentBody', 'attachmentFile', 'linkTargetTaskId');
         $this->linkType = 'relates';
+        $this->editTaskPriority = 2;
+        $this->editTaskDueDate = '';
+        $this->editTaskTags = '';
+        $this->editTaskAssigneeId = null;
+        $this->editTaskThemeId = null;
         unset($this->focusedTask);
+    }
+
+    public function saveTaskMeta(): void
+    {
+        $task = $this->focusedTask;
+        if (! $task) {
+            return;
+        }
+
+        $this->authorize('update', $this->project);
+
+        $allowed = $this->assigneeUserIds;
+
+        $validated = $this->validate([
+            'editTaskPriority' => ['required', 'integer', Rule::in([Task::PRIORITY_LOW, Task::PRIORITY_NORMAL, Task::PRIORITY_HIGH])],
+            'editTaskDueDate' => ['nullable', 'date'],
+            'editTaskTags' => ['nullable', 'string', 'max:500'],
+            'editTaskAssigneeId' => ['nullable', 'integer', Rule::in($allowed)],
+            'editTaskThemeId' => ['nullable', 'integer', Rule::exists('roadmap_themes', 'id')->where('project_id', $this->projectId)],
+        ]);
+
+        $rawTags = $validated['editTaskTags'] ?? '';
+        $tags = array_values(array_filter(array_map(trim(...), explode(',', (string) $rawTags))));
+
+        $task->update([
+            'priority' => $validated['editTaskPriority'],
+            'due_date' => $validated['editTaskDueDate'] ?: null,
+            'tags' => $tags !== [] ? $tags : null,
+            'assigned_to' => $validated['editTaskAssigneeId'],
+            'theme_id' => $validated['editTaskThemeId'],
+        ]);
+
+        unset($this->focusedTask, $this->project);
     }
 
     public function addComment(): void
@@ -591,6 +724,165 @@ class extends Component
         unset($this->project);
     }
 
+    public function inviteMember(): void
+    {
+        $this->authorize('manageSettings', $this->project);
+
+        $validated = $this->validate([
+            'inviteEmail' => ['required', 'email', 'max:255'],
+            'inviteRole' => ['required', Rule::in(['editor', 'viewer'])],
+        ]);
+
+        $this->project->invitations()->create([
+            'invited_by' => auth()->id(),
+            'email' => $validated['inviteEmail'],
+            'role' => $validated['inviteRole'],
+        ]);
+
+        $this->reset('inviteEmail', 'inviteRole');
+        $this->inviteRole = 'editor';
+        unset($this->project);
+    }
+
+    public function revokeInvitation(ProjectInvitation $invitation): void
+    {
+        $this->authorize('manageSettings', $this->project);
+        if ($invitation->project_id !== $this->projectId) {
+            abort(403);
+        }
+        $invitation->delete();
+        unset($this->project);
+    }
+
+    public function removeMember(int $userId): void
+    {
+        $this->authorize('manageSettings', $this->project);
+        if ($userId === $this->project->user_id) {
+            return;
+        }
+        $this->project->members()->detach($userId);
+        unset($this->project);
+    }
+
+    public function addWebhook(): void
+    {
+        $this->authorize('manageSettings', $this->project);
+
+        $validated = $this->validate([
+            'webhookUrl' => ['required', 'url', 'max:2048'],
+            'webhookEvents' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $events = null;
+        $raw = trim($validated['webhookEvents'] ?? '');
+        if ($raw !== '') {
+            $events = array_values(array_filter(array_map(trim(...), explode(',', $raw))));
+        }
+
+        $this->project->webhooks()->create([
+            'url' => $validated['webhookUrl'],
+            'events' => $events,
+            'active' => true,
+        ]);
+
+        $this->reset('webhookUrl', 'webhookEvents');
+        unset($this->project);
+    }
+
+    public function deleteWebhook(ProjectWebhook $webhook): void
+    {
+        $this->authorize('manageSettings', $this->project);
+        if ($webhook->project_id !== $this->projectId) {
+            abort(403);
+        }
+        $webhook->delete();
+        unset($this->project);
+    }
+
+    public function addShareLink(): void
+    {
+        $this->authorize('manageSettings', $this->project);
+
+        $validated = $this->validate([
+            'shareLinkLabel' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $this->project->shareTokens()->create([
+            'name' => $validated['shareLinkLabel'] ?: null,
+        ]);
+
+        $this->reset('shareLinkLabel');
+        unset($this->project);
+    }
+
+    public function revokeShareLink(ProjectShareToken $token): void
+    {
+        $this->authorize('manageSettings', $this->project);
+        if ($token->project_id !== $this->projectId) {
+            abort(403);
+        }
+        $token->delete();
+        unset($this->project);
+    }
+
+    public function addTheme(): void
+    {
+        $this->authorize('update', $this->project);
+
+        $validated = $this->validate([
+            'themeName' => ['required', 'string', 'max:120'],
+            'themeColor' => ['required', 'string', 'max:32'],
+        ]);
+
+        $max = (int) $this->project->themes()->max('sort_order');
+
+        $this->project->themes()->create([
+            'name' => $validated['themeName'],
+            'color' => $validated['themeColor'],
+            'sort_order' => $max + 1,
+        ]);
+
+        $this->reset('themeName', 'themeColor');
+        $this->themeColor = '#0d9488';
+        unset($this->project);
+    }
+
+    public function deleteTheme(RoadmapTheme $theme): void
+    {
+        $this->authorize('update', $this->project);
+        if ($theme->project_id !== $this->projectId) {
+            abort(403);
+        }
+        $theme->delete();
+        unset($this->project);
+    }
+
+    public function archiveProject(): void
+    {
+        $this->authorize('manageSettings', $this->project);
+        $this->project->update(['archived_at' => now()]);
+        unset($this->project);
+    }
+
+    public function unarchiveProject(): void
+    {
+        $this->authorize('manageSettings', $this->project);
+        $this->project->update(['archived_at' => null]);
+        unset($this->project);
+    }
+
+    public function rotateCursorToken(): void
+    {
+        $this->authorize('update', $this->project);
+        $this->revealedCursorToken = app(ProjectCursorTokenIssuer::class)->issue($this->project, auth()->user());
+        unset($this->project);
+    }
+
+    public function dismissRevealedCursorToken(): void
+    {
+        $this->revealedCursorToken = null;
+    }
+
     private function assertTaskOnProject(Task $task): void
     {
         if ($task->project_id !== $this->project->id) {
@@ -637,7 +929,15 @@ class extends Component
     ];
 @endphp
 
-<div class="py-10 px-4 sm:px-6 lg:px-8">
+<div
+    class="py-10 px-4 sm:px-6 lg:px-8"
+    x-data
+    x-on:keydown.window.prevent="
+        if ($event.key === '/' && ! ['INPUT','TEXTAREA','SELECT'].includes($event.target.tagName)) {
+            $refs.boardSearch?.focus();
+        }
+    "
+>
     <div class="max-w-6xl mx-auto space-y-8">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0 flex-1">
@@ -746,7 +1046,7 @@ class extends Component
 
         <div class="border-b border-cream-300">
             <nav class="-mb-px flex gap-1 overflow-x-auto pb-px" aria-label="Project sections">
-                @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'wishlist' => 'Wishlist', 'links' => 'Links'] as $key => $label)
+                @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'wishlist' => 'Wishlist', 'links' => 'Links', 'settings' => 'Settings'] as $key => $label)
                     <button
                         type="button"
                         wire:click="$set('tab', '{{ $key }}')"
@@ -765,11 +1065,28 @@ class extends Component
             <div class="rounded-xl border border-sage-light/50 bg-sage-light/10 p-4 sm:p-5">
                 <h2 class="text-sm font-semibold text-ink">Sync with Cursor &amp; this directory</h2>
                 <p class="mt-1 text-sm text-ink/70 max-w-3xl">
-                    Save <strong>waypost.json</strong> in your local repo root (same folder you open in Cursor). The MCP server reads it for
-                    <code class="rounded bg-cream-200 px-1 text-xs">api_base</code> and default <code class="rounded bg-cream-200 px-1 text-xs">project_id</code>.
-                    Create an API token under <a href="{{ route('profile') }}" wire:navigate class="text-sage-dark underline font-medium">Profile</a>
-                    and add <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code> to your MCP config (never commit the token).
+                    Save <strong>waypost.json</strong> in your repo root (the folder you open in Cursor). It carries
+                    <code class="rounded bg-cream-200 px-1 text-xs">api_base</code> and
+                    <code class="rounded bg-cream-200 px-1 text-xs">project_id</code>. A <strong>project API token</strong> is created for you automatically
+                    (or use a token from <a href="{{ route('profile') }}" wire:navigate class="text-sage-dark underline font-medium">Profile</a> for every project).
+                    Put the token in MCP env <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code>, or add an
+                    <code class="rounded bg-cream-200 px-1 text-xs">api_token</code> field to <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code> locally — never commit secrets.
                 </p>
+                @if ($this->revealedCursorToken)
+                    <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50/90 p-3">
+                        <p class="text-sm font-medium text-ink">Copy this token now — it will not be shown again until you rotate.</p>
+                        <code class="mt-2 block select-all break-all rounded bg-white p-2 text-xs text-ink ring-1 ring-cream-300">{{ $this->revealedCursorToken }}</code>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                wire:click="dismissRevealedCursorToken"
+                                class="text-sm font-medium text-ink/70 hover:text-ink"
+                            >
+                                Hide
+                            </button>
+                        </div>
+                    </div>
+                @endif
                 <div class="mt-3 flex flex-wrap items-center gap-3">
                     <a
                         href="{{ route('projects.waypost-manifest', $this->project) }}"
@@ -778,6 +1095,15 @@ class extends Component
                     >
                         Download waypost.json
                     </a>
+                    @can('update', $this->project)
+                        <button
+                            type="button"
+                            wire:click="rotateCursorToken"
+                            class="text-sm font-semibold text-sage-dark hover:text-sage-deeper underline"
+                        >
+                            Rotate project API token
+                        </button>
+                    @endcan
                     <a href="{{ route('docs.api') }}" wire:navigate class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline">
                         API &amp; MCP docs
                     </a>
@@ -791,14 +1117,71 @@ class extends Component
         {{-- Kanban --}}
         @if ($this->tab === 'board')
             <div class="space-y-6" wire:key="tab-board">
+                <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <p class="text-xs text-ink/50">Press <kbd class="rounded border border-cream-300 bg-cream-100 px-1">/</kbd> to focus search.</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input
+                            x-ref="boardSearch"
+                            type="search"
+                            wire:model.live.debounce.300ms="boardSearch"
+                            placeholder="Search cards…"
+                            class="min-w-[12rem] flex-1 rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage sm:max-w-xs"
+                        />
+                        <div class="inline-flex rounded-lg border border-cream-300 p-0.5 text-xs font-semibold">
+                            <button
+                                type="button"
+                                wire:click="$set('boardLayout', 'columns')"
+                                class="rounded-md px-2 py-1 {{ $this->boardLayout === 'columns' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                            >
+                                Columns
+                            </button>
+                            <button
+                                type="button"
+                                wire:click="$set('boardLayout', 'list')"
+                                class="rounded-md px-2 py-1 {{ $this->boardLayout === 'list' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                            >
+                                List
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                @if ($this->boardLayout === 'list')
+                    <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <h2 class="text-lg font-semibold text-ink">All cards (list)</h2>
+                        <ul class="mt-4 divide-y divide-cream-200">
+                            @php $statusOrder = array_flip(Task::KANBAN_STATUSES); @endphp
+                            @foreach ($this->boardTasks->sortBy(fn (Task $t) => [$statusOrder[$t->status] ?? 99, $t->position]) as $task)
+                                <li wire:key="list-task-{{ $task->id }}" class="flex flex-wrap items-center justify-between gap-2 py-3">
+                                    <div class="min-w-0">
+                                        <span class="text-sm font-medium text-ink">{{ $task->title }}</span>
+                                        <span class="ms-2 text-xs text-ink/55">{{ $kanbanLabels[$task->status] ?? $task->status }}</span>
+                                        @if ($task->blocking_links_count > 0)
+                                            <span class="ms-2 text-xs font-semibold text-amber-800">Blocked</span>
+                                        @endif
+                                    </div>
+                                    <button
+                                        type="button"
+                                        wire:click="openTaskDetail({{ $task->id }})"
+                                        class="text-sm font-medium text-sage-dark hover:text-sage-deeper"
+                                    >
+                                        Open
+                                    </button>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endif
+
                 <div
                     data-kanban-board
-                    class="overflow-x-auto pb-2 -mx-1 px-1"
+                    data-kanban-init="{{ $this->boardLayout === 'columns' && trim($this->boardSearch) === '' ? '1' : '0' }}"
+                    class="overflow-x-auto pb-2 -mx-1 px-1 {{ $this->boardLayout === 'list' ? 'hidden' : '' }}"
                 >
-                    <div class="flex min-h-[28rem] gap-4" style="min-width: min(100%, 56rem);">
+                    <div class="flex min-h-[28rem] gap-4" style="min-width: min(100%, 70rem);">
                         @foreach (Task::KANBAN_STATUSES as $status)
                             @php
-                                $colTasks = $this->project->tasks
+                                $colTasks = $this->boardTasks
                                     ->filter(fn (Task $t) => $t->status === $status)
                                     ->sortBy('position')
                                     ->values();
@@ -840,6 +1223,9 @@ class extends Component
                                                     @if ($task->attachments_count > 0)
                                                         <span>{{ $task->attachments_count }} {{ $task->attachments_count === 1 ? 'file' : 'files' }}</span>
                                                     @endif
+                                                    @if ($task->blocking_links_count > 0)
+                                                        <span class="font-semibold text-amber-800">Blocked</span>
+                                                    @endif
                                                 </div>
                                             </div>
                                             <button
@@ -857,6 +1243,7 @@ class extends Component
                     </div>
                 </div>
 
+                @can('update', $this->project)
                 <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
                     <h2 class="text-lg font-semibold text-ink">Add card</h2>
                     <p class="mt-1 text-sm text-ink/55">New tasks start in a column of your choice. Optionally tie them to a roadmap version.</p>
@@ -927,12 +1314,14 @@ class extends Component
                         </div>
                     </form>
                 </section>
+                @endcan
 
                 <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
                     <h2 class="text-lg font-semibold text-ink">All tasks</h2>
                     <p class="mt-1 text-sm text-ink/55">Remove a card from the project (same as deleting it from the board).</p>
                     <ul class="mt-4 divide-y divide-cream-200">
-                        @foreach ($this->project->tasks->sortBy(fn (Task $t) => [$t->status, $t->position]) as $task)
+                        @php $rowStatusOrder = array_flip(Task::KANBAN_STATUSES); @endphp
+                        @foreach ($this->project->tasks->sortBy(fn (Task $t) => [$rowStatusOrder[$t->status] ?? 99, $t->position]) as $task)
                             <li wire:key="task-row-{{ $task->id }}" class="flex flex-wrap items-center justify-between gap-2 py-3">
                                 <div class="min-w-0">
                                     <span class="text-sm font-medium text-ink">{{ $task->title }}</span>
@@ -946,6 +1335,7 @@ class extends Component
                                     >
                                         Details
                                     </button>
+                                    @can('update', $this->project)
                                     <button
                                         type="button"
                                         wire:click="deleteTask({{ $task->id }})"
@@ -954,6 +1344,7 @@ class extends Component
                                     >
                                         Delete
                                     </button>
+                                    @endcan
                                 </div>
                             </li>
                         @endforeach
@@ -965,6 +1356,44 @@ class extends Component
         {{-- Roadmap --}}
         @if ($this->tab === 'roadmap')
             <div class="space-y-8" wire:key="tab-roadmap">
+                <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between rounded-xl border border-cream-300/80 bg-white p-4 shadow-sm">
+                    <a
+                        href="{{ route('projects.export.tasks', $this->project) }}"
+                        class="text-sm font-semibold text-sage-dark hover:text-sage-deeper underline"
+                    >
+                        Export all tasks (CSV)
+                    </a>
+                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-ink/80">
+                        <input type="checkbox" wire:model.live="hideShippedVersions" class="rounded border-cream-300 text-sage focus:ring-sage" />
+                        Hide shipped versions
+                    </label>
+                </div>
+
+                @php
+                    $versionsList = $this->hideShippedVersions
+                        ? $this->project->versions->whereNull('released_at')
+                        : $this->project->versions;
+                    $ganttVersions = $versionsList->filter(fn ($v) => $v->target_date)->sortBy('target_date');
+                @endphp
+
+                @if ($ganttVersions->isNotEmpty())
+                    <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <h2 class="text-lg font-semibold text-ink">Timeline</h2>
+                        <p class="mt-1 text-sm text-ink/55">Target dates on a simple strip (not a full Gantt chart).</p>
+                        <ul class="mt-4 space-y-3">
+                            @foreach ($ganttVersions as $gv)
+                                <li class="flex flex-wrap items-center gap-3 text-sm">
+                                    <span class="w-40 shrink-0 truncate font-medium text-ink">{{ $gv->name }}</span>
+                                    <div class="min-w-[8rem] flex-1 h-2 overflow-hidden rounded-full bg-cream-200">
+                                        <div class="h-full rounded-full bg-sage" style="width: 100%"></div>
+                                    </div>
+                                    <span class="shrink-0 text-xs text-ink/60">{{ $gv->target_date->format('M j, Y') }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endif
+
                 <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
                     <h2 class="text-lg font-semibold text-ink">Versions & milestones</h2>
                     <p class="mt-1 text-sm text-ink/55">Plan releases, target dates, and changelog-style notes. Assign tasks to a version below.</p>
@@ -1059,7 +1488,7 @@ class extends Component
                 @endif
 
                 <div class="relative space-y-6 pl-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-cream-300">
-                    @forelse ($this->project->versions as $version)
+                    @forelse ($versionsList as $version)
                         <article wire:key="version-{{ $version->id }}" class="relative rounded-2xl border border-cream-300 bg-white p-5 shadow-sm pl-6">
                             <span class="absolute -left-[1.15rem] top-6 flex h-3 w-3 rounded-full border-2 border-white bg-sage-light ring-2 ring-cream-300"></span>
                             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -1103,6 +1532,12 @@ class extends Component
                                     <button type="button" wire:click="startEditVersion({{ $version->id }})" class="rounded-lg border border-cream-300 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-cream-100">
                                         Edit
                                     </button>
+                                    <a
+                                        href="{{ route('projects.export.version', [$this->project, $version]) }}"
+                                        class="inline-flex items-center rounded-lg border border-cream-300 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-cream-100"
+                                    >
+                                        Export .md
+                                    </a>
                                     <button
                                         type="button"
                                         wire:click="deleteVersion({{ $version->id }})"
@@ -1254,6 +1689,183 @@ class extends Component
                 </section>
             </div>
         @endif
+
+        @if ($this->tab === 'settings')
+            <div class="max-w-3xl space-y-8" wire:key="tab-settings">
+                @if ($this->project->archived_at)
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                        This project was archived on {{ $this->project->archived_at->format('M j, Y') }}.
+                        @can('manageSettings', $this->project)
+                            <button type="button" wire:click="unarchiveProject" class="ms-2 font-semibold text-amber-900 underline">Restore</button>
+                        @endcan
+                    </div>
+                @endif
+
+                @can('manageSettings', $this->project)
+                    <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <h2 class="text-lg font-semibold text-ink">People & invites</h2>
+                        <p class="mt-1 text-sm text-ink/55">Invite by email. They must sign in with the same address to accept.</p>
+                        <form wire:submit="inviteMember" class="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                            <div class="min-w-0 flex-1">
+                                <label class="block text-xs font-medium text-ink/70">Email</label>
+                                <input wire:model="inviteEmail" type="email" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" required />
+                                @error('inviteEmail')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-ink/70">Role</label>
+                                <select wire:model="inviteRole" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm sm:w-36">
+                                    <option value="editor">Editor</option>
+                                    <option value="viewer">Viewer</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark">Create invite</button>
+                        </form>
+                        <ul class="mt-6 space-y-3 text-sm">
+                            @foreach ($this->project->invitations as $inv)
+                                <li wire:key="inv-{{ $inv->id }}" class="flex flex-col gap-2 rounded-lg border border-cream-200 bg-cream-50/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-ink">{{ $inv->email }}</p>
+                                        <p class="text-xs text-ink/55">{{ $inv->role }} · expires {{ $inv->expires_at?->format('M j, Y') }}</p>
+                                        <p class="mt-1 break-all text-xs font-mono text-ink/60">{{ route('invitations.accept', ['token' => $inv->token]) }}</p>
+                                    </div>
+                                    <button type="button" wire:click="revokeInvitation({{ $inv->id }})" class="text-xs font-semibold text-red-700 hover:underline">Revoke</button>
+                                </li>
+                            @endforeach
+                            @if ($this->project->invitations->isEmpty())
+                                <li class="text-ink/55">No pending invitations.</li>
+                            @endif
+                        </ul>
+                        <h3 class="mt-8 text-sm font-semibold text-ink">Members</h3>
+                        <ul class="mt-2 space-y-2 text-sm">
+                            <li class="flex items-center justify-between rounded-lg border border-cream-200 px-3 py-2">
+                                <span>{{ $this->project->user->name }} (owner)</span>
+                            </li>
+                            @foreach ($this->project->members as $m)
+                                <li wire:key="mem-{{ $m->id }}" class="flex items-center justify-between rounded-lg border border-cream-200 px-3 py-2">
+                                    <span>{{ $m->name }} <span class="text-ink/50">({{ $m->pivot->role }})</span></span>
+                                    <button type="button" wire:click="removeMember({{ $m->id }})" class="text-xs text-red-700 hover:underline">Remove</button>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+
+                    <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <h2 class="text-lg font-semibold text-ink">Public roadmap link</h2>
+                        <p class="mt-1 text-sm text-ink/55">Anyone with the link can view versions and task titles (read-only).</p>
+                        <form wire:submit="addShareLink" class="mt-4 flex flex-wrap items-end gap-3">
+                            <div class="min-w-0 flex-1">
+                                <label class="block text-xs font-medium text-ink/70">Label <span class="font-normal text-ink/40">(optional)</span></label>
+                                <input wire:model="shareLinkLabel" type="text" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" placeholder="e.g. Stakeholders" />
+                            </div>
+                            <button type="submit" class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark">Generate link</button>
+                        </form>
+                        <ul class="mt-4 space-y-2 text-sm">
+                            @foreach ($this->project->shareTokens as $st)
+                                <li wire:key="share-{{ $st->id }}" class="rounded-lg border border-cream-200 bg-cream-50/80 p-3">
+                                    <p class="font-medium text-ink">{{ $st->name ?: 'Shared roadmap' }}</p>
+                                    <p class="mt-1 break-all text-xs font-mono text-ink/70">{{ route('roadmap.public', ['token' => $st->token]) }}</p>
+                                    <button type="button" wire:click="revokeShareLink({{ $st->id }})" class="mt-2 text-xs text-red-700 hover:underline">Revoke</button>
+                                </li>
+                            @endforeach
+                            @if ($this->project->shareTokens->isEmpty())
+                                <li class="text-ink/55">No share links yet.</li>
+                            @endif
+                        </ul>
+                    </section>
+
+                    <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <h2 class="text-lg font-semibold text-ink">Webhooks</h2>
+                        <p class="mt-1 text-sm text-ink/55">POST JSON to your URL on task changes. Leave events blank to receive all. Comma-separated event names otherwise (e.g. task.created,task.updated).</p>
+                        <form wire:submit="addWebhook" class="mt-4 space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-ink/70">Endpoint URL</label>
+                                <input wire:model="webhookUrl" type="url" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" required />
+                                @error('webhookUrl')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-ink/70">Events</label>
+                                <input wire:model="webhookEvents" type="text" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" placeholder="task.created, task.updated" />
+                            </div>
+                            <button type="submit" class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark">Add webhook</button>
+                        </form>
+                        <ul class="mt-4 space-y-2 text-sm">
+                            @foreach ($this->project->webhooks as $wh)
+                                <li wire:key="wh-{{ $wh->id }}" class="flex items-start justify-between gap-2 rounded-lg border border-cream-200 px-3 py-2">
+                                    <div class="min-w-0">
+                                        <p class="truncate font-mono text-xs text-ink">{{ $wh->url }}</p>
+                                        <p class="text-xs text-ink/50">{{ $wh->active ? 'Active' : 'Off' }} · secret ends …{{ substr($wh->secret, -4) }}</p>
+                                    </div>
+                                    <button type="button" wire:click="deleteWebhook({{ $wh->id }})" class="shrink-0 text-xs text-red-700 hover:underline">Delete</button>
+                                </li>
+                            @endforeach
+                            @if ($this->project->webhooks->isEmpty())
+                                <li class="text-ink/55">No webhooks configured.</li>
+                            @endif
+                        </ul>
+                    </section>
+
+                    <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <h2 class="text-lg font-semibold text-ink">Archive project</h2>
+                        <p class="mt-1 text-sm text-ink/55">Archived projects stay available but are hidden from the default project list.</p>
+                        @if (! $this->project->archived_at)
+                            <button
+                                type="button"
+                                wire:click="archiveProject"
+                                wire:confirm="Archive this project?"
+                                class="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-100"
+                            >
+                                Archive
+                            </button>
+                        @endif
+                    </section>
+                @endcan
+
+                @can('update', $this->project)
+                    <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <h2 class="text-lg font-semibold text-ink">Roadmap themes</h2>
+                        <p class="mt-1 text-sm text-ink/55">Group tasks under colored themes on the planning fields.</p>
+                        <form wire:submit="addTheme" class="mt-4 flex flex-wrap items-end gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-ink/70">Name</label>
+                                <input wire:model="themeName" type="text" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm sm:w-48" required />
+                                @error('themeName')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-ink/70">Color</label>
+                                <input wire:model="themeColor" type="color" class="mt-1 h-9 w-16 cursor-pointer rounded border border-cream-300" />
+                            </div>
+                            <button type="submit" class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark">Add theme</button>
+                        </form>
+                        <ul class="mt-4 space-y-2 text-sm">
+                            @foreach ($this->project->themes as $th)
+                                <li wire:key="theme-{{ $th->id }}" class="flex items-center justify-between rounded-lg border border-cream-200 px-3 py-2">
+                                    <span class="flex items-center gap-2">
+                                        <span class="inline-block h-3 w-3 rounded-full ring-1 ring-ink/10" style="background: {{ $th->color }}"></span>
+                                        {{ $th->name }}
+                                    </span>
+                                    <button type="button" wire:click="deleteTheme({{ $th->id }})" class="text-xs text-red-700 hover:underline">Delete</button>
+                                </li>
+                            @endforeach
+                            @if ($this->project->themes->isEmpty())
+                                <li class="text-ink/55">No themes yet.</li>
+                            @endif
+                        </ul>
+                    </section>
+                @endcan
+
+                @cannot('manageSettings', $this->project)
+                    @cannot('update', $this->project)
+                        <p class="text-sm text-ink/55">You have read-only access to this project.</p>
+                    @endcannot
+                @endcannot
+            </div>
+        @endif
     </div>
 
     @if ($this->focusedTask)
@@ -1284,9 +1896,54 @@ class extends Component
                     @if ($ft->body)
                         <div>
                             <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Description</h3>
-                            <p class="mt-1 text-sm text-ink whitespace-pre-wrap">{{ $ft->body }}</p>
+                            <div class="markdown-body mt-2 max-w-none text-sm leading-relaxed text-ink [&_a]:font-medium [&_a]:text-sage-dark [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-cream-300 [&_blockquote]:ps-3 [&_code]:rounded [&_code]:bg-cream-100 [&_code]:px-1 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:ps-5">
+                                {!! str($ft->body)->markdown() !!}
+                            </div>
                         </div>
                     @endif
+
+                    @can('update', $this->project)
+                        <form wire:submit="saveTaskMeta" class="space-y-3 rounded-xl border border-cream-200 bg-cream-50/80 p-4">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Planning</h3>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-xs text-ink/70">Priority</label>
+                                    <select wire:model="editTaskPriority" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                        <option value="{{ Task::PRIORITY_LOW }}">Low</option>
+                                        <option value="{{ Task::PRIORITY_NORMAL }}">Normal</option>
+                                        <option value="{{ Task::PRIORITY_HIGH }}">High</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-ink/70">Due date</label>
+                                    <input wire:model="editTaskDueDate" type="date" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs text-ink/70">Tags (comma-separated)</label>
+                                    <input wire:model="editTaskTags" type="text" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" placeholder="frontend, bug, polish" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-ink/70">Assignee</label>
+                                    <select wire:model="editTaskAssigneeId" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                        <option value="">— Unassigned —</option>
+                                        @foreach (collect([$this->project->user])->merge($this->project->members)->unique('id') as $member)
+                                            <option value="{{ $member->id }}">{{ $member->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-ink/70">Theme</label>
+                                    <select wire:model="editTaskThemeId" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                        <option value="">— None —</option>
+                                        @foreach ($this->project->themes as $th)
+                                            <option value="{{ $th->id }}">{{ $th->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="rounded-lg bg-sage px-3 py-2 text-sm font-semibold text-white hover:bg-sage-dark">Save planning fields</button>
+                        </form>
+                    @endcan
 
                     <div>
                         <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Linked tasks</h3>
@@ -1295,14 +1952,14 @@ class extends Component
                                 @if ($link->type === TaskLink::TYPE_RELATES)
                                     <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-cream-100 px-3 py-2">
                                         <span><span class="text-ink/55">Related to</span>
-                                            <button type="button" wire:click="openTaskDetail({{ $link->target_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->target->title }}</button>
+                                            <button type="button" wire:click="openTaskDetail({{ $link->target_task_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->target->title }}</button>
                                         </span>
                                         <button type="button" wire:click="deleteTaskLink({{ $link->id }})" class="text-xs text-red-600 hover:underline">Remove</button>
                                     </li>
                                 @else
                                     <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50/80 px-3 py-2">
                                         <span><span class="text-ink/70">Blocks</span>
-                                            <button type="button" wire:click="openTaskDetail({{ $link->target_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->target->title }}</button>
+                                            <button type="button" wire:click="openTaskDetail({{ $link->target_task_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->target->title }}</button>
                                         </span>
                                         <button type="button" wire:click="deleteTaskLink({{ $link->id }})" class="text-xs text-red-600 hover:underline">Remove</button>
                                     </li>
@@ -1312,14 +1969,14 @@ class extends Component
                                 @if ($link->type === TaskLink::TYPE_RELATES)
                                     <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-cream-100 px-3 py-2">
                                         <span><span class="text-ink/55">Related to</span>
-                                            <button type="button" wire:click="openTaskDetail({{ $link->source_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->source->title }}</button>
+                                            <button type="button" wire:click="openTaskDetail({{ $link->source_task_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->source->title }}</button>
                                         </span>
                                         <button type="button" wire:click="deleteTaskLink({{ $link->id }})" class="text-xs text-red-600 hover:underline">Remove</button>
                                     </li>
                                 @else
                                     <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-red-50/60 px-3 py-2">
                                         <span><span class="text-ink/70">Blocked by</span>
-                                            <button type="button" wire:click="openTaskDetail({{ $link->source_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->source->title }}</button>
+                                            <button type="button" wire:click="openTaskDetail({{ $link->source_task_id }})" class="ms-1 font-medium text-sage-dark hover:underline">{{ $link->source->title }}</button>
                                         </span>
                                         <button type="button" wire:click="deleteTaskLink({{ $link->id }})" class="text-xs text-red-600 hover:underline">Remove</button>
                                     </li>

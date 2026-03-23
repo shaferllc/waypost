@@ -8,10 +8,27 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
             @php
-                $counts = auth()->user()->projects()->withCount(['tasks', 'links'])->get();
+                $accessibleProjectIds = \App\Models\Project::query()->accessible(auth()->user())->pluck('id');
+                $counts = \App\Models\Project::query()
+                    ->accessible(auth()->user())
+                    ->notArchived()
+                    ->withCount(['tasks', 'links'])
+                    ->get();
                 $projectCount = $counts->count();
                 $taskCount = $counts->sum('tasks_count');
                 $linkCount = $counts->sum('links_count');
+
+                $activity = \App\Models\ChangelogEntry::query()
+                    ->where(function ($q) use ($accessibleProjectIds): void {
+                        $q->where('user_id', auth()->id());
+                        if ($accessibleProjectIds->isNotEmpty()) {
+                            $q->orWhereIn('project_id', $accessibleProjectIds);
+                        }
+                    })
+                    ->latest()
+                    ->limit(12)
+                    ->with('project:id,name')
+                    ->get();
             @endphp
 
             <div class="grid gap-4 sm:grid-cols-3">
@@ -43,6 +60,29 @@
                         Go to projects
                     </a>
                 </div>
+            </div>
+
+            <div class="overflow-hidden bg-cream-50 shadow-sm sm:rounded-xl border border-cream-300/80 ring-1 ring-ink/5">
+                <div class="border-b border-cream-200 px-6 py-4 sm:px-8">
+                    <h3 class="text-lg font-semibold text-ink">Recent activity</h3>
+                    <p class="mt-1 text-sm text-ink/60">Changelog from the web app and API across your projects.</p>
+                </div>
+                <ul class="divide-y divide-cream-200">
+                    @forelse ($activity as $entry)
+                        <li class="px-6 py-3 sm:px-8">
+                            <p class="text-sm text-ink">{{ $entry->summary }}</p>
+                            <p class="mt-1 text-xs text-ink/50">
+                                {{ $entry->created_at->diffForHumans() }}
+                                @if ($entry->project)
+                                    · {{ $entry->project->name }}
+                                @endif
+                                · {{ $entry->source }}
+                            </p>
+                        </li>
+                    @empty
+                        <li class="px-6 py-8 sm:px-8 text-sm text-ink/55">No activity yet.</li>
+                    @endforelse
+                </ul>
             </div>
         </div>
     </div>

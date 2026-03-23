@@ -12,10 +12,20 @@ Base path: `/api` (e.g. `https://your-domain.test/api/projects`).
 
 ## 1. Create an API token
 
+### Project token (Cursor / MCP)
+
+Each project can have a **scoped** token created automatically when you create the project or first open it (if you can edit the project). Copy it from the **Sync with Cursor & this directory** panel on the project page, or from the banner right after **Create project**. That token only works for **that** project’s API routes and changelog. Rotate it from the same panel if needed.
+
+Download **`waypost.json`** from the project page for `api_base` and `project_id`. You can paste the token into MCP as `WAYPOST_API_TOKEN`, or add an `api_token` field to `waypost.json` **locally** — do **not** commit secrets.
+
+### General token (Profile)
+
 1. Sign in to Waypost in the browser.
 2. Open **Profile**.
 3. Under **API tokens**, enter a name (e.g. `Bookmarklet`) and click **Create token**.
 4. Copy the token immediately; it is only shown once.
+
+Profile tokens are **not** limited to one project (useful for bookmarklets or multi-project clients).
 
 Use it on every request:
 
@@ -37,7 +47,7 @@ Projects belong to your user. **`project_id`** in URLs is the numeric primary ke
 
 `GET /api/projects`
 
-Returns every project you own:
+With a **project-scoped** token, returns at most that one project (if you still have access). With a normal Profile token, returns every project you own:
 
 ```json
 {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Project;
+use App\Services\ProjectCursorTokenIssuer;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -19,14 +20,23 @@ class extends Component
 
     public ?int $lastCreatedProjectId = null;
 
+    public ?string $lastCreatedCursorToken = null;
+
+    public bool $showArchived = false;
+
     #[Computed]
     public function projects()
     {
-        return Auth::user()
-            ->projects()
+        $query = Project::query()
+            ->accessible(Auth::user())
             ->withCount(['tasks', 'links', 'versions', 'wishlistItems'])
-            ->latest()
-            ->get();
+            ->latest('updated_at');
+
+        if (! $this->showArchived) {
+            $query->notArchived();
+        }
+
+        return $query->get();
     }
 
     public function save(): void
@@ -46,6 +56,7 @@ class extends Component
         ]);
 
         $this->lastCreatedProjectId = $project->id;
+        $this->lastCreatedCursorToken = app(ProjectCursorTokenIssuer::class)->issue($project, Auth::user());
 
         $this->reset('name', 'description', 'url');
         unset($this->projects);
@@ -54,6 +65,7 @@ class extends Component
     public function dismissCreatedBanner(): void
     {
         $this->lastCreatedProjectId = null;
+        $this->lastCreatedCursorToken = null;
     }
 
     public function delete(Project $project): void
@@ -144,8 +156,13 @@ class extends Component
                 >
                     <p class="text-sm font-medium text-ink">Project created.</p>
                     <p class="mt-1 text-sm text-ink/70">
-                        Download <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> into this repo’s root so Cursor MCP can target this project.
+                        Download <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> into this repo’s root. A project API token was created — copy it below for
+                        <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">WAYPOST_API_TOKEN</code> or paste into <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> as
+                        <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">api_token</code> locally (never commit).
                     </p>
+                    @if ($this->lastCreatedCursorToken)
+                        <code class="mt-3 block select-all break-all rounded bg-white p-2 text-xs text-ink ring-1 ring-cream-300">{{ $this->lastCreatedCursorToken }}</code>
+                    @endif
                     <div class="mt-3 flex flex-wrap items-center gap-3">
                         <a
                             href="{{ route('projects.waypost-manifest', ['project' => $this->lastCreatedProjectId]) }}"
@@ -167,7 +184,13 @@ class extends Component
         </div>
 
         <div>
-            <h2 class="text-lg font-semibold text-ink mb-4">All projects</h2>
+            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 class="text-lg font-semibold text-ink">All projects</h2>
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-ink/80">
+                    <input type="checkbox" wire:model.live="showArchived" class="rounded border-cream-300 text-sage focus:ring-sage" />
+                    Show archived
+                </label>
+            </div>
             @if ($this->projects->isEmpty())
                 <div class="rounded-2xl border border-dashed border-cream-300 bg-cream-100/80 px-6 py-16 text-center">
                     <p class="text-ink/70">No projects yet. Create one above to get started.</p>
@@ -180,7 +203,15 @@ class extends Component
                             class="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-cream-300 bg-white p-5 shadow-sm transition hover:border-sage-light/50 hover:shadow-md"
                         >
                             <a href="{{ route('projects.show', $project) }}" wire:navigate class="min-w-0 flex-1">
-                                <h3 class="font-semibold text-ink group-hover:text-sage-dark">{{ $project->name }}</h3>
+                                <h3 class="font-semibold text-ink group-hover:text-sage-dark">
+                                    {{ $project->name }}
+                                    @if ($project->user_id !== auth()->id())
+                                        <span class="ms-2 text-xs font-normal text-ink/50">Shared</span>
+                                    @endif
+                                    @if ($project->archived_at)
+                                        <span class="ms-2 text-xs font-normal text-amber-800">Archived</span>
+                                    @endif
+                                </h3>
                                 @if ($project->description)
                                     <p class="mt-1 text-sm text-ink/70 line-clamp-2">{{ $project->description }}</p>
                                 @endif
@@ -208,14 +239,16 @@ class extends Component
                                 >
                                     Open
                                 </a>
-                                <button
-                                    type="button"
-                                    wire:click="delete({{ $project->id }})"
-                                    wire:confirm="Delete this project and all of its tasks and links?"
-                                    class="rounded-lg px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
-                                >
-                                    Delete
-                                </button>
+                                @can('delete', $project)
+                                    <button
+                                        type="button"
+                                        wire:click="delete({{ $project->id }})"
+                                        wire:confirm="Delete this project and all of its tasks and links?"
+                                        class="rounded-lg px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                                    >
+                                        Delete
+                                    </button>
+                                @endcan
                             </div>
                         </li>
                     @endforeach
