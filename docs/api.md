@@ -2,6 +2,8 @@
 
 In the app (signed in): open **API docs** in the top nav or go to `/docs/api`.
 
+**Cursor / MCP:** see `mcp/waypost-server/README.md` for a local MCP server that creates tasks and reads the changelog.
+
 Personal API for your account: list projects, add **pinned links (URLs)**, **wishlist ideas**, and **tasks** on a board. All routes require a **Sanctum personal access token** (Bearer).
 
 **Local dev login** (`composer setup` or `php artisan db:seed`): `test@example.com` / `password` (see `.env.example`).
@@ -22,6 +24,8 @@ Authorization: Bearer YOUR_PLAIN_TEXT_TOKEN
 Accept: application/json
 Content-Type: application/json
 ```
+
+Optional on **mutating** requests (tasks, wishlist, links): set `X-Waypost-Source` to a short label (`mcp`, `cursor`, `api`, etc.). It is stored on the **changelog** so you can tell Cursor apart from other clients.
 
 API responses are JSON. Unauthenticated requests return `401` with JSON (not an HTML login page).
 
@@ -145,23 +149,37 @@ curl -sS -X POST "https://your-domain.test/api/projects/1/tasks" \
   }'
 ```
 
-## 6. Quick reference
+## 6. Activity changelog
+
+`GET /api/changelog`
+
+Query params:
+
+- `limit` — optional, 1–100 (default 40)
+- `project_id` — optional, only entries for that project
+
+Returns newest-first rows: `source`, `action`, `summary`, `meta` (JSON), `project_id`, `created_at`.
+
+Creating a **task**, **wishlist item**, or **project link** via the API appends a changelog row. Unknown `X-Waypost-Source` values are stored as `api`.
+
+## 7. Quick reference
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/api/projects` | List projects (`id`, `name`, `description`) |
+| `GET` | `/api/changelog` | Recent activity (tasks, wishlist, links) |
+| `GET` | `/api/projects` | List projects (`id`, `name`, `description`, `url`) |
 | `GET` | `/api/projects/{project}` | Project + `versions` for `version_id` |
 | `POST` | `/api/projects/{project}/links` | Add pinned URL |
 | `POST` | `/api/projects/{project}/wishlist-items` | Add wishlist idea |
 | `POST` | `/api/projects/{project}/tasks` | Create task |
 
-## 7. CORS and browser extensions
+## 8. CORS and browser extensions
 
 Calls from **another website’s JavaScript** may be blocked by the browser until CORS allows your origin. Typical setups:
 
 - **Server-side** script, **curl**, or **extension background/service worker**: no CORS issue for simple Bearer requests.
 - **Bookmarklet or page script** on arbitrary sites: configure Laravel CORS to allow your origins, or proxy through your own backend.
 
-## 8. Revoking access
+## 9. Revoking access
 
 In **Profile → API tokens**, revoke a token to invalidate it immediately.

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\ChangelogRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -33,6 +34,19 @@ class ProjectTaskController extends Controller
             'position' => $max + 1,
             'version_id' => $validated['version_id'] ?? null,
         ]);
+
+        app(ChangelogRecorder::class)->record(
+            $request->user(),
+            'task.created',
+            "Created task: {$task->title}",
+            $project->id,
+            [
+                'task_id' => $task->id,
+                'status' => $task->status,
+                'version_id' => $task->version_id,
+            ],
+            $request->header('X-Waypost-Source'),
+        );
 
         return response()->json([
             'data' => [

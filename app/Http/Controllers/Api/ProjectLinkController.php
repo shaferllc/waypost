@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Services\ChangelogRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -25,6 +26,15 @@ class ProjectLinkController extends Controller
             'title' => $title,
             'url' => $validated['url'],
         ]);
+
+        app(ChangelogRecorder::class)->record(
+            $request->user(),
+            'project_link.created',
+            "Link: {$link->title}",
+            $project->id,
+            ['project_link_id' => $link->id, 'url' => $link->url],
+            $request->header('X-Waypost-Source'),
+        );
 
         return response()->json([
             'data' => [

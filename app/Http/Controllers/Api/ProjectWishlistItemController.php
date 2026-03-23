@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Services\ChangelogRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -26,6 +27,15 @@ class ProjectWishlistItemController extends Controller
             'notes' => $validated['notes'] ?? null,
             'sort_order' => $max + 1,
         ]);
+
+        app(ChangelogRecorder::class)->record(
+            $request->user(),
+            'wishlist_item.created',
+            "Wishlist idea: {$item->title}",
+            $project->id,
+            ['wishlist_item_id' => $item->id],
+            $request->header('X-Waypost-Source'),
+        );
 
         return response()->json([
             'data' => [
