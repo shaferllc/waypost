@@ -28,6 +28,7 @@ class ProjectEditTest extends TestCase
             ->assertSet('editingProject', true)
             ->set('editProjectName', 'Renamed')
             ->set('editProjectDescription', 'New description')
+            ->set('editProjectUrl', 'https://example.com/app')
             ->call('saveProject')
             ->assertHasNoErrors()
             ->assertSet('editingProject', false);
@@ -35,6 +36,7 @@ class ProjectEditTest extends TestCase
         $project->refresh();
         $this->assertSame('Renamed', $project->name);
         $this->assertSame('New description', $project->description);
+        $this->assertSame('https://example.com/app', $project->url);
     }
 
     public function test_cancel_edit_discards_changes(): void

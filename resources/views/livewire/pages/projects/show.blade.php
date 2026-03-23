@@ -76,6 +76,8 @@ class extends Component
 
     public string $editProjectDescription = '';
 
+    public string $editProjectUrl = '';
+
     public function mount(Project $project): void
     {
         $this->authorize('view', $project);
@@ -122,13 +124,14 @@ class extends Component
         $this->authorize('update', $this->project);
         $this->editProjectName = $this->project->name;
         $this->editProjectDescription = (string) ($this->project->description ?? '');
+        $this->editProjectUrl = (string) ($this->project->url ?? '');
         $this->editingProject = true;
     }
 
     public function cancelEditProject(): void
     {
         $this->editingProject = false;
-        $this->reset('editProjectName', 'editProjectDescription');
+        $this->reset('editProjectName', 'editProjectDescription', 'editProjectUrl');
     }
 
     public function saveProject(): void
@@ -138,15 +141,17 @@ class extends Component
         $validated = $this->validate([
             'editProjectName' => ['required', 'string', 'max:120'],
             'editProjectDescription' => ['nullable', 'string', 'max:2000'],
+            'editProjectUrl' => ['nullable', 'url', 'max:2048'],
         ]);
 
         $this->project->update([
             'name' => $validated['editProjectName'],
             'description' => $validated['editProjectDescription'] ?: null,
+            'url' => $validated['editProjectUrl'] ?: null,
         ]);
 
         $this->editingProject = false;
-        $this->reset('editProjectName', 'editProjectDescription');
+        $this->reset('editProjectName', 'editProjectDescription', 'editProjectUrl');
         unset($this->project);
     }
 
@@ -670,6 +675,23 @@ class extends Component
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+                        <div>
+                            <label for="editProjectUrl" class="block text-sm font-medium text-ink">
+                                Project URL <span class="text-ink/40 font-normal">(optional)</span>
+                            </label>
+                            <input
+                                wire:model="editProjectUrl"
+                                id="editProjectUrl"
+                                type="url"
+                                inputmode="url"
+                                autocomplete="url"
+                                class="mt-1 block w-full rounded-lg border-cream-300 shadow-sm focus:border-sage focus:ring-sage"
+                                placeholder="https://…"
+                            />
+                            @error('editProjectUrl')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                         <div class="flex flex-wrap items-center gap-2">
                             <button
                                 type="submit"
@@ -692,6 +714,18 @@ class extends Component
                             <h1 class="text-3xl font-bold tracking-tight text-ink">{{ $this->project->name }}</h1>
                             @if ($this->project->description)
                                 <p class="mt-2 text-ink/70 max-w-2xl">{{ $this->project->description }}</p>
+                            @endif
+                            @if ($this->project->url)
+                                <p class="mt-2 max-w-2xl">
+                                    <a
+                                        href="{{ $this->project->url }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="text-sm font-medium text-sage-dark hover:text-sage-deeper break-all"
+                                    >
+                                        {{ $this->project->url }}
+                                    </a>
+                                </p>
                             @endif
                         </div>
                         @can('update', $this->project)

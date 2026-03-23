@@ -15,6 +15,8 @@ class extends Component
 
     public string $description = '';
 
+    public string $url = '';
+
     #[Computed]
     public function projects()
     {
@@ -32,14 +34,16 @@ class extends Component
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'url' => ['nullable', 'url', 'max:2048'],
         ]);
 
         Auth::user()->projects()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?: null,
+            'url' => $validated['url'] ?: null,
         ]);
 
-        $this->reset('name', 'description');
+        $this->reset('name', 'description', 'url');
         unset($this->projects);
     }
 
@@ -98,6 +102,23 @@ class extends Component
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+                <div>
+                    <label for="project-url" class="block text-sm font-medium text-ink">
+                        Project URL <span class="text-ink/40 font-normal">(optional)</span>
+                    </label>
+                    <input
+                        wire:model="url"
+                        id="project-url"
+                        type="url"
+                        inputmode="url"
+                        autocomplete="url"
+                        class="mt-1 block w-full rounded-lg border-cream-300 shadow-sm focus:border-sage focus:ring-sage"
+                        placeholder="https://…"
+                    />
+                    @error('url')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
                 <div class="flex justify-end">
                     <button
                         type="submit"
@@ -126,6 +147,12 @@ class extends Component
                                 <h3 class="font-semibold text-ink group-hover:text-sage-dark">{{ $project->name }}</h3>
                                 @if ($project->description)
                                     <p class="mt-1 text-sm text-ink/70 line-clamp-2">{{ $project->description }}</p>
+                                @endif
+                                @if ($project->url)
+                                    <p class="mt-1 text-xs">
+                                        <span class="text-ink/55">URL:</span>
+                                        <span class="text-sage-dark break-all">{{ $project->url }}</span>
+                                    </p>
                                 @endif
                                 <p class="mt-2 text-xs text-ink/55">
                                     {{ $project->tasks_count }} {{ $project->tasks_count === 1 ? 'task' : 'tasks' }}

@@ -38,10 +38,12 @@ Returns every project you own:
 ```json
 {
   "data": [
-    { "id": 1, "name": "My app", "description": "..." }
+    { "id": 1, "name": "My app", "description": "...", "url": "https://example.com" }
   ]
 }
 ```
+
+`url` may be `null` if not set in the app.
 
 Use `data[].id` as `{project}` in the routes below.
 
@@ -57,6 +59,7 @@ Use this when you need **`version_id`** for tasks tied to a roadmap version:
     "id": 1,
     "name": "My app",
     "description": "...",
+    "url": "https://example.com",
     "versions": [
       { "id": 4, "name": "v1.0", "target_date": "2026-06-01" }
     ]

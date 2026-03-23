@@ -16,7 +16,7 @@ class ProjectController extends Controller
             ->projects()
             ->reorder()
             ->orderBy('name')
-            ->get(['id', 'name', 'description']);
+            ->get(['id', 'name', 'description', 'url']);
 
         return response()->json(['data' => $projects]);
     }
@@ -38,6 +38,7 @@ class ProjectController extends Controller
                 'id' => $project->id,
                 'name' => $project->name,
                 'description' => $project->description,
+                'url' => $project->url,
                 'versions' => $project->versions->map(fn ($v) => [
                     'id' => $v->id,
                     'name' => $v->name,
