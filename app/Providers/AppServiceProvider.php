@@ -15,6 +15,7 @@ use App\Observers\OkrObjectiveObserver;
 use App\Observers\ProjectLinkObserver;
 use App\Observers\TaskObserver;
 use App\Observers\WishlistItemObserver;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
 
@@ -33,6 +34,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (! $this->app->environment('local', 'testing')) {
+            URL::forceScheme('https');
+        }
+
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
 
         Task::observe(TaskObserver::class);

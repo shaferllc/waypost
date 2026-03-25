@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ApiAcceptsJson;
 use App\Http\Middleware\EnforceProjectScopedSanctumToken;
+use App\Http\Middleware\ValidateFleetOperatorToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,12 +16,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Honor X-Forwarded-* from the edge (e.g. dply.io) so scheme/host match the public HTTPS URL.
+        $middleware->trustProxies(at: '*');
+
         $middleware->api(prepend: [
             ApiAcceptsJson::class,
         ]);
         $middleware->alias([
             'token.project' => EnforceProjectScopedSanctumToken::class,
-            'fleet.operator' => \App\Http\Middleware\ValidateFleetOperatorToken::class,
+            'fleet.operator' => ValidateFleetOperatorToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
