@@ -49,6 +49,12 @@ class ProjectLinksApiTest extends TestCase
             'title' => 'Docs',
             'url' => 'https://docs.example.com/guide',
         ]);
+
+        $this->assertDatabaseHas('project_activities', [
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'action' => 'project_link.created',
+        ]);
     }
 
     public function test_store_link_defaults_title_to_host(): void

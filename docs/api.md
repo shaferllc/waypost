@@ -6,7 +6,7 @@ In the app (signed in): open **API docs** in the top nav or go to `/docs/api`.
 
 Personal API for your account: list projects, add **pinned links (URLs)**, **wishlist ideas**, and **tasks** on a board (including **OKR links**, **initiative dates**, and **planning status**). All routes require a **Sanctum personal access token** (Bearer).
 
-The **browser UI** can refresh in near real time when **Laravel Reverb** is configured (`BROADCAST_CONNECTION=reverb`, `php artisan reverb:start`, and `VITE_REVERB_*` in `.env`). The API itself stays HTTP; Reverb only pushes lightweight `project.{id}` events to open project pages.
+The **browser UI** can refresh in near real time when **Laravel Reverb** is configured (`BROADCAST_CONNECTION=reverb`, `composer run reverb` or `php artisan reverb:start`, and `VITE_REVERB_*` in `.env`). The API itself stays HTTP; Reverb only pushes lightweight `project.{id}` events to open project pages. See **`docs/reverb-production.md`** for a second-terminal dev workflow and production notes.
 
 **Local dev login** (`composer setup` or `php artisan db:seed`): `test@example.com` / `password` (see `.env.example`).
 

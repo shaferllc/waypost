@@ -82,6 +82,12 @@ class ProjectWishlistApiTest extends TestCase
             'notes' => 'https://example.com/page',
             'sort_order' => 1,
         ]);
+
+        $this->assertDatabaseHas('project_activities', [
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'action' => 'wishlist_item.created',
+        ]);
     }
 
     public function test_store_wishlist_item_appends_sort_order_after_existing(): void

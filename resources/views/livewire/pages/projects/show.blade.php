@@ -1373,6 +1373,18 @@ class extends Component
             </div>
         </div>
 
+        @if ($this->project->tasks->count() > 300)
+            <div
+                class="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950"
+                role="status"
+            >
+                <p class="font-medium">Large board ({{ $this->project->tasks->count() }} tasks)</p>
+                <p class="mt-1 text-amber-900/90">
+                    Search and roadmap filters help narrow the list. Full lazy loading for the board is not enabled yet, so very large projects may feel slower.
+                </p>
+            </div>
+        @endif
+
         <div class="border-b border-cream-300">
             <nav class="-mb-px flex gap-1 overflow-x-auto pb-px" aria-label="Project sections">
                 @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'okrs' => 'OKRs', 'wishlist' => 'Wishlist', 'links' => 'Links', 'settings' => 'Settings'] as $key => $label)
@@ -2458,7 +2470,7 @@ class extends Component
 
                 <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
                     <h2 class="text-lg font-semibold text-ink">Recent activity</h2>
-                    <p class="mt-1 text-sm text-ink/55">Latest changes to tasks and OKRs in this project (actions performed while signed in).</p>
+                    <p class="mt-1 text-sm text-ink/55">Latest changes to tasks, OKRs, wishlist, and links in this project (actions performed while signed in).</p>
                     <ul class="mt-4 max-h-80 space-y-2 overflow-y-auto text-sm">
                         @forelse ($this->project->activities as $act)
                             <li wire:key="act-{{ $act->id }}" class="rounded-lg border border-cream-200 bg-cream-50/80 px-3 py-2">
@@ -2474,7 +2486,7 @@ class extends Component
                                 @endif
                             </li>
                         @empty
-                            <li class="text-ink/55">No activity recorded yet. Updates will appear here as you edit tasks and OKRs.</li>
+                            <li class="text-ink/55">No activity recorded yet. Updates will appear here as you edit tasks, OKRs, wishlist, and links.</li>
                         @endforelse
                     </ul>
                 </section>

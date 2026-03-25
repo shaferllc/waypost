@@ -68,6 +68,18 @@ if (!token) {
 
 const MCP_SOURCE = "mcp";
 
+const taskStatusSchema = z.enum(["backlog", "todo", "in_progress", "in_review", "done"]);
+
+const planningStatusSchema = z.enum(["on_time", "in_progress", "not_started", "behind", "blocked"]);
+
+const taskPrioritySchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+
+function jsonBody(payload: Record<string, unknown>): string {
+  return JSON.stringify(
+    Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== undefined)),
+  );
+}
+
 function requireProjectId(explicit: number | undefined): number {
   if (explicit != null && Number.isFinite(explicit)) {
     return explicit;
@@ -206,16 +218,22 @@ server.registerTool(
         .describe("Defaults from waypost.json / WAYPOST_PROJECT_ID"),
       title: z.string().min(1).max(255).describe("Task title"),
       body: z.string().max(5000).optional().describe("Optional description / notes"),
-      status: z
-        .enum(["backlog", "todo", "in_progress", "done"])
-        .optional()
-        .describe("Kanban column; default todo"),
+      status: taskStatusSchema.optional().describe("Kanban column; default todo"),
       version_id: z
         .number()
         .int()
         .positive()
         .optional()
         .describe("Roadmap version id from waypost_get_project"),
+      theme_id: z.number().int().positive().optional().describe("Roadmap theme id"),
+      assigned_to: z.number().int().positive().optional().describe("User id to assign"),
+      priority: taskPrioritySchema.optional().describe("1 low, 2 normal, 3 high"),
+      due_date: z.string().max(32).optional().describe("ISO date YYYY-MM-DD"),
+      starts_at: z.string().max(32).optional().describe("Initiative start YYYY-MM-DD"),
+      ends_at: z.string().max(32).optional().describe("Initiative end YYYY-MM-DD"),
+      planning_status: planningStatusSchema.optional(),
+      okr_objective_id: z.number().int().positive().optional().describe("OKR objective id in this project"),
+      tags: z.array(z.string().max(64)).max(50).optional(),
     },
     annotations: writeAnnotations,
   },
@@ -227,14 +245,62 @@ server.registerTool(
         body: args.body,
         status: args.status,
         version_id: args.version_id,
+        theme_id: args.theme_id,
+        assigned_to: args.assigned_to,
+        priority: args.priority,
+        due_date: args.due_date,
+        starts_at: args.starts_at,
+        ends_at: args.ends_at,
+        planning_status: args.planning_status,
+        okr_objective_id: args.okr_objective_id,
+        tags: args.tags,
       };
-      const payload = Object.fromEntries(
-        Object.entries(body).filter(([, v]) => v !== undefined && v !== null),
-      );
       return textResult(
         await waypostFetch(`/projects/${projectId}/tasks`, {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: jsonBody(body),
+        }),
+      );
+    } catch (e) {
+      return toolError(e instanceof Error ? e.message : String(e));
+    }
+  },
+);
+
+server.registerTool(
+  "waypost_update_task",
+  {
+    title: "Update a Waypost task",
+    description:
+      "PATCH a task (title, status, OKR link, initiative dates, planning status, tags, etc.). project_id optional when waypost.json is set.",
+    inputSchema: {
+      project_id: z.number().int().positive().optional(),
+      task_id: z.number().int().positive().describe("Task id"),
+      title: z.string().min(1).max(255).optional(),
+      body: z.string().max(5000).nullable().optional(),
+      status: taskStatusSchema.optional(),
+      version_id: z.number().int().positive().nullable().optional(),
+      theme_id: z.number().int().positive().nullable().optional(),
+      assigned_to: z.number().int().positive().nullable().optional(),
+      priority: taskPrioritySchema.optional(),
+      due_date: z.string().max(32).nullable().optional(),
+      starts_at: z.string().max(32).nullable().optional(),
+      ends_at: z.string().max(32).nullable().optional(),
+      planning_status: planningStatusSchema.nullable().optional(),
+      okr_objective_id: z.number().int().positive().nullable().optional(),
+      tags: z.array(z.string().max(64)).max(50).nullable().optional(),
+    },
+    annotations: writeAnnotations,
+  },
+  async (args) => {
+    try {
+      const projectId = requireProjectId(args.project_id);
+      const { task_id: taskId, project_id: _p, ...rest } = args;
+      const body: Record<string, unknown> = { ...rest };
+      return textResult(
+        await waypostFetch(`/projects/${projectId}/tasks/${taskId}`, {
+          method: "PATCH",
+          body: jsonBody(body),
         }),
       );
     } catch (e) {

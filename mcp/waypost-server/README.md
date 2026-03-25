@@ -1,6 +1,6 @@
 # Waypost MCP server
 
-Connect [Cursor](https://cursor.com) (or any MCP client) to your Waypost app so the agent can **create tasks**, **add wishlist ideas**, **pin links**, and read an **activity changelog** (what changed via API/MCP).
+Connect [Cursor](https://cursor.com) (or any MCP client) to your Waypost app so the agent can **create and update tasks** (including OKR links, initiative dates, planning status, tags), **add wishlist ideas**, **pin links**, and read an **activity changelog** (what changed via API/MCP).
 
 The server talks to Waypost over the **HTTP API** with your **Sanctum personal access token** and sends `X-Waypost-Source: mcp` so actions are labeled in the changelog.
 
@@ -49,7 +49,8 @@ Restart Cursor or reload MCP after changes.
 |------|---------|
 | `waypost_list_projects` | List projects (ids, names, urls) |
 | `waypost_get_project` | Project + roadmap `versions` |
-| `waypost_create_task` | New board task |
+| `waypost_create_task` | New board task (optional theme, assignee, priority, dates, OKR, tags) |
+| `waypost_update_task` | PATCH an existing task by id |
 | `waypost_create_wishlist_idea` | New wishlist item |
 | `waypost_add_project_link` | Pin a URL on the Links tab |
 | `waypost_get_changelog` | Recent logged actions (`source` includes `mcp`) |
