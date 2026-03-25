@@ -47,4 +47,26 @@ class PasswordUpdateTest extends TestCase
             ->assertHasErrors(['current_password'])
             ->assertNoRedirect();
     }
+
+    public function test_oauth_user_can_set_initial_password_without_current_password(): void
+    {
+        $user = User::factory()->create([
+            'password' => null,
+            'provider' => 'google',
+            'provider_id' => 'sub-abc',
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Volt::test('profile.update-password-form')
+            ->set('password', 'new-password')
+            ->set('password_confirmation', 'new-password')
+            ->call('updatePassword');
+
+        $component
+            ->assertHasNoErrors()
+            ->assertNoRedirect();
+
+        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+    }
 }

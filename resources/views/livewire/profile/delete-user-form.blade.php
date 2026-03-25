@@ -2,22 +2,33 @@
 
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
 
 new class extends Component
 {
     public string $password = '';
 
+    public string $delete_confirmation = '';
+
     /**
      * Delete the currently authenticated user.
      */
     public function deleteUser(Logout $logout): void
     {
-        $this->validate([
-            'password' => ['required', 'string', 'current_password'],
-        ]);
+        $user = Auth::user();
 
-        tap(Auth::user(), $logout(...))->delete();
+        if ($user->password !== null) {
+            $this->validate([
+                'password' => ['required', 'string', 'current_password'],
+            ]);
+        } else {
+            $this->validate([
+                'delete_confirmation' => ['required', 'string', Rule::in(['DELETE'])],
+            ]);
+        }
+
+        tap($user, $logout(...))->delete();
 
         $this->redirect('/', navigate: true);
     }
@@ -47,22 +58,42 @@ new class extends Component
             </h2>
 
             <p class="mt-1 text-sm text-ink/70">
-                {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+                @if (auth()->user()->password !== null)
+                    {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+                @else
+                    {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Type DELETE in capital letters to confirm.') }}
+                @endif
             </p>
 
             <div class="mt-6">
-                <x-input-label for="password" value="{{ __('Password') }}" class="sr-only" />
+                @if (auth()->user()->password !== null)
+                    <x-input-label for="password" value="{{ __('Password') }}" class="sr-only" />
 
-                <x-text-input
-                    wire:model="password"
-                    id="password"
-                    name="password"
-                    type="password"
-                    class="mt-1 block w-3/4"
-                    placeholder="{{ __('Password') }}"
-                />
+                    <x-text-input
+                        wire:model="password"
+                        id="password"
+                        name="password"
+                        type="password"
+                        class="mt-1 block w-3/4"
+                        placeholder="{{ __('Password') }}"
+                    />
 
-                <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                @else
+                    <x-input-label for="delete_confirmation" value="{{ __('Confirmation') }}" />
+
+                    <x-text-input
+                        wire:model="delete_confirmation"
+                        id="delete_confirmation"
+                        name="delete_confirmation"
+                        type="text"
+                        class="mt-1 block w-3/4"
+                        placeholder="DELETE"
+                        autocomplete="off"
+                    />
+
+                    <x-input-error :messages="$errors->get('delete_confirmation')" class="mt-2" />
+                @endif
             </div>
 
             <div class="mt-6 flex justify-end">

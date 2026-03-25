@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ApiAcceptsJson;
 use App\Http\Middleware\EnforceProjectScopedSanctumToken;
+use App\Http\Middleware\EnsureTwoFactorChallengeSession;
 use App\Http\Middleware\ValidateFleetOperatorToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'token.project' => EnforceProjectScopedSanctumToken::class,
             'fleet.operator' => ValidateFleetOperatorToken::class,
+            'two_factor.challenge' => EnsureTwoFactorChallengeSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

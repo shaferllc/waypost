@@ -137,6 +137,7 @@ class ProjectTasksApiTest extends TestCase
         $this->getJson("/api/projects/{$project->id}")
             ->assertOk()
             ->assertJsonPath('data.name', 'API')
+            ->assertJsonCount(0, 'data.themes')
             ->assertJsonCount(1, 'data.versions')
             ->assertJsonPath('data.versions.0.name', 'MVP');
     }

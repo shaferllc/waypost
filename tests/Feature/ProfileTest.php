@@ -22,6 +22,7 @@ class ProfileTest extends TestCase
             ->assertSeeVolt('profile.update-profile-information-form')
             ->assertSeeVolt('profile.update-password-form')
             ->assertSeeVolt('profile.api-tokens-form')
+            ->assertSeeVolt('profile.two-factor-authentication-form')
             ->assertSeeVolt('profile.delete-user-form');
     }
 
@@ -98,5 +99,27 @@ class ProfileTest extends TestCase
             ->assertNoRedirect();
 
         $this->assertNotNull($user->fresh());
+    }
+
+    public function test_oauth_only_user_can_delete_account_with_delete_confirmation(): void
+    {
+        $user = User::factory()->create([
+            'password' => null,
+            'provider' => 'github',
+            'provider_id' => '12345',
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Volt::test('profile.delete-user-form')
+            ->set('delete_confirmation', 'DELETE')
+            ->call('deleteUser');
+
+        $component
+            ->assertHasNoErrors()
+            ->assertRedirect('/');
+
+        $this->assertGuest();
+        $this->assertNull($user->fresh());
     }
 }

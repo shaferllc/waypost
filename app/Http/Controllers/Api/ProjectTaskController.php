@@ -13,6 +13,30 @@ use Illuminate\Validation\Rule;
 
 class ProjectTaskController extends Controller
 {
+    public function index(Request $request, Project $project): JsonResponse
+    {
+        Gate::authorize('view', $project);
+
+        $tasks = $project->tasks()->get();
+
+        return response()->json([
+            'data' => $tasks->map(fn (Task $t) => $this->taskPayload($t)),
+        ]);
+    }
+
+    public function show(Request $request, Project $project, Task $task): JsonResponse
+    {
+        Gate::authorize('view', $project);
+
+        if ($task->project_id !== $project->id) {
+            abort(404);
+        }
+
+        return response()->json([
+            'data' => $this->taskPayload($task),
+        ]);
+    }
+
     public function store(Request $request, Project $project): JsonResponse
     {
         Gate::authorize('update', $project);
@@ -62,25 +86,7 @@ class ProjectTaskController extends Controller
         ]);
 
         return response()->json([
-            'data' => [
-                'id' => $task->id,
-                'project_id' => $task->project_id,
-                'version_id' => $task->version_id,
-                'theme_id' => $task->theme_id,
-                'okr_objective_id' => $task->okr_objective_id,
-                'assigned_to' => $task->assigned_to,
-                'title' => $task->title,
-                'body' => $task->body,
-                'status' => $task->status,
-                'position' => $task->position,
-                'priority' => $task->priority,
-                'due_date' => $task->due_date?->format('Y-m-d'),
-                'starts_at' => $task->starts_at?->format('Y-m-d'),
-                'ends_at' => $task->ends_at?->format('Y-m-d'),
-                'planning_status' => $task->planning_status,
-                'tags' => $task->tags,
-                'created_at' => $task->created_at?->toIso8601String(),
-            ],
+            'data' => $this->taskPayload($task),
         ], 201);
     }
 
@@ -114,30 +120,13 @@ class ProjectTaskController extends Controller
             ],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:64'],
+            'position' => ['sometimes', 'integer', 'min:0', 'max:100000'],
         ]);
 
         $task->update($validated);
 
         return response()->json([
-            'data' => [
-                'id' => $task->id,
-                'project_id' => $task->project_id,
-                'version_id' => $task->version_id,
-                'theme_id' => $task->theme_id,
-                'assigned_to' => $task->assigned_to,
-                'title' => $task->title,
-                'body' => $task->body,
-                'status' => $task->status,
-                'position' => $task->position,
-                'priority' => $task->priority,
-                'due_date' => $task->due_date?->format('Y-m-d'),
-                'starts_at' => $task->starts_at?->format('Y-m-d'),
-                'ends_at' => $task->ends_at?->format('Y-m-d'),
-                'planning_status' => $task->planning_status,
-                'okr_objective_id' => $task->okr_objective_id,
-                'tags' => $task->tags,
-                'updated_at' => $task->updated_at?->toIso8601String(),
-            ],
+            'data' => $this->taskPayload($task),
         ]);
     }
 
@@ -152,5 +141,32 @@ class ProjectTaskController extends Controller
         $task->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function taskPayload(Task $task): array
+    {
+        return [
+            'id' => $task->id,
+            'project_id' => $task->project_id,
+            'version_id' => $task->version_id,
+            'theme_id' => $task->theme_id,
+            'okr_objective_id' => $task->okr_objective_id,
+            'assigned_to' => $task->assigned_to,
+            'title' => $task->title,
+            'body' => $task->body,
+            'status' => $task->status,
+            'position' => $task->position,
+            'priority' => $task->priority,
+            'due_date' => $task->due_date?->format('Y-m-d'),
+            'starts_at' => $task->starts_at?->format('Y-m-d'),
+            'ends_at' => $task->ends_at?->format('Y-m-d'),
+            'planning_status' => $task->planning_status,
+            'tags' => $task->tags,
+            'created_at' => $task->created_at?->toIso8601String(),
+            'updated_at' => $task->updated_at?->toIso8601String(),
+        ];
     }
 }

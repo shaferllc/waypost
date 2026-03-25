@@ -1,8 +1,8 @@
 # Waypost MCP server
 
-Connect [Cursor](https://cursor.com) (or any MCP client) to your Waypost app so the agent can **create and update tasks** (including OKR links, initiative dates, planning status, tags), **add wishlist ideas**, **pin links**, and read an **activity changelog** (what changed via API/MCP).
+Connect [Cursor](https://cursor.com) (or any MCP client) to your Waypost app so the agent can **create and update tasks** (including OKR links, initiative dates, planning status, tags), **add wishlist ideas**, **pin links**, read an **activity changelog**, and call **any JSON endpoint** on your server.
 
-The server talks to Waypost over the **HTTP API** with your **Sanctum personal access token** and sends `X-Waypost-Source: mcp` so actions are labeled in the changelog.
+The server always talks to Waypost over **HTTP** (`WAYPOST_BASE_URL` + `/api/...`) using your **Sanctum personal access token**. It sends `X-Waypost-Source: mcp` on mutating requests so actions are labeled in the changelog. There is no separate local data store.
 
 ## Setup
 
@@ -47,8 +47,10 @@ Restart Cursor or reload MCP after changes.
 
 | Tool | Purpose |
 |------|---------|
+| `waypost_workspace_status` | Resolved `WAYPOST_BASE_URL` and default `project_id` |
+| `waypost_http_request` | **GET/POST/PATCH/DELETE** any path under `/api` (full CRUD: projects, tasks list/delete, links/wishlist CRUD, roadmap versions/themes, etc.) |
 | `waypost_list_projects` | List projects (ids, names, urls) |
-| `waypost_get_project` | Project + roadmap `versions` |
+| `waypost_get_project` | Project + roadmap `themes` and `versions` |
 | `waypost_create_task` | New board task (optional theme, assignee, priority, dates, OKR, tags) |
 | `waypost_update_task` | PATCH an existing task by id |
 | `waypost_create_wishlist_idea` | New wishlist item |

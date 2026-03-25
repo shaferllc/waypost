@@ -27,6 +27,12 @@
 
             <div class="p-4 sm:p-8 bg-cream-50 border border-cream-300/80 shadow-sm sm:rounded-lg ring-1 ring-ink/5">
                 <div class="max-w-xl">
+                    <livewire:profile.two-factor-authentication-form />
+                </div>
+            </div>
+
+            <div class="p-4 sm:p-8 bg-cream-50 border border-cream-300/80 shadow-sm sm:rounded-lg ring-1 ring-ink/5">
+                <div class="max-w-xl">
                     <livewire:profile.delete-user-form />
                 </div>
             </div>

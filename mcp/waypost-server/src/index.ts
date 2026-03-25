@@ -80,6 +80,26 @@ function jsonBody(payload: Record<string, unknown>): string {
   );
 }
 
+/** Path segment under `/api` only; query params go in the tool's `query` object. */
+function assertSafeRelativeApiPath(path: string): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  if (normalized.includes("..")) {
+    throw new Error("path must not contain '..'");
+  }
+  if (normalized.includes("?") || normalized.includes("#")) {
+    throw new Error("do not put ? or # in path; use the query object for query parameters");
+  }
+  if (normalized.length > 1024) {
+    throw new Error("path too long");
+  }
+  if (!/^\/[a-zA-Z0-9/_.-]+$/.test(normalized)) {
+    throw new Error(
+      "path must be relative to /api using letters, digits, /, _, ., and - (e.g. /projects/1/tasks)",
+    );
+  }
+  return normalized;
+}
+
 function requireProjectId(explicit: number | undefined): number {
   if (explicit != null && Number.isFinite(explicit)) {
     return explicit;
@@ -105,6 +125,12 @@ async function waypostFetch(path: string, init: RequestInit = {}): Promise<unkno
   }
   const res = await fetch(url, { ...init, headers });
   const text = await res.text();
+  if (text.trim() === "") {
+    if (!res.ok) {
+      throw new Error(`Waypost API HTTP ${res.status}: ${res.statusText || "empty body"}`);
+    }
+    return null;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(text) as unknown;
@@ -141,6 +167,13 @@ const readAnnotations = {
 const writeAnnotations = {
   readOnlyHint: false,
   destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: true,
+} as const;
+
+const httpToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: true,
   idempotentHint: false,
   openWorldHint: true,
 } as const;
@@ -359,6 +392,54 @@ server.registerTool(
           body: JSON.stringify({ url: args.url, title: args.title }),
         }),
       );
+    } catch (e) {
+      return toolError(e instanceof Error ? e.message : String(e));
+    }
+  },
+);
+
+server.registerTool(
+  "waypost_http_request",
+  {
+    title: "Call the Waypost HTTP API (full CRUD)",
+    description:
+      "Performs GET/POST/PATCH/DELETE against your Waypost server at WAYPOST_BASE_URL + /api + path. Uses the same Bearer token as other tools. Use this for any endpoint not covered by a dedicated tool (list tasks, delete tasks, project CRUD, links/wishlist CRUD, roadmap versions/themes, etc.). Path is relative to /api (e.g. /projects/1/tasks). Do not pass secrets in query or json_body.",
+    inputSchema: {
+      method: z.enum(["GET", "POST", "PATCH", "DELETE"]).describe("HTTP method"),
+      path: z
+        .string()
+        .min(1)
+        .describe("URL path under /api, starting with / (e.g. /projects/12/links/3)"),
+      query: z
+        .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+        .optional()
+        .describe("Optional query string parameters"),
+      json_body: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe("JSON object body for POST/PATCH (ignored for GET/DELETE)"),
+    },
+    annotations: httpToolAnnotations,
+  },
+  async (args) => {
+    try {
+      const path = assertSafeRelativeApiPath(args.path);
+      const params = new URLSearchParams();
+      if (args.query) {
+        for (const [k, v] of Object.entries(args.query)) {
+          params.set(k, String(v));
+        }
+      }
+      const qs = params.toString();
+      const pathWithQuery = `${path}${qs ? `?${qs}` : ""}`;
+      const init: RequestInit = { method: args.method };
+      if (
+        (args.method === "POST" || args.method === "PATCH") &&
+        args.json_body !== undefined
+      ) {
+        init.body = JSON.stringify(args.json_body);
+      }
+      return textResult(await waypostFetch(pathWithQuery, init));
     } catch (e) {
       return toolError(e instanceof Error ? e.message : String(e));
     }

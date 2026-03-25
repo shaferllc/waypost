@@ -2,9 +2,9 @@
 
 In the app (signed in): open **API docs** in the top nav or go to `/docs/api`.
 
-**Cursor / MCP:** see `mcp/waypost-server/README.md` for a local MCP server that creates tasks and reads the changelog.
+**Cursor / MCP:** see `mcp/waypost-server/README.md`. The MCP server calls your Waypost app over **HTTP** (`WAYPOST_BASE_URL` + `/api/...`). Dedicated tools cover common actions; **`waypost_http_request`** exposes **full CRUD** for any JSON endpoint (same Bearer token and `X-Waypost-Source: mcp`).
 
-Personal API for your account: list projects, add **pinned links (URLs)**, **wishlist ideas**, and **tasks** on a board (including **OKR links**, **initiative dates**, and **planning status**). All routes require a **Sanctum personal access token** (Bearer).
+Personal API for your account: **full CRUD** on **projects**, **roadmap versions**, **roadmap themes**, **pinned links**, **wishlist ideas**, and **tasks** (including **OKR links**, **initiative dates**, and **planning status**). All routes require a **Sanctum personal access token** (Bearer).
 
 The **browser UI** can refresh in near real time when **Laravel Reverb** is configured (`BROADCAST_CONNECTION=reverb`, `composer run reverb` or `php artisan reverb:start`, and `VITE_REVERB_*` in `.env`). The API itself stays HTTP; Reverb only pushes lightweight `project.{id}` events to open project pages. See **`docs/reverb-production.md`** for a second-terminal dev workflow and production notes.
 
@@ -63,11 +63,11 @@ With a **project-scoped** token, returns at most that one project (if you still 
 
 Use `data[].id` as `{project}` in the routes below.
 
-### Project detail and roadmap versions (optional)
+### Project detail, themes, and roadmap versions
 
 `GET /api/projects/{project}`
 
-Use this when you need **`version_id`** for tasks tied to a roadmap version:
+Use this when you need **`version_id`** or **`theme_id`** for tasks:
 
 ```json
 {
@@ -76,6 +76,9 @@ Use this when you need **`version_id`** for tasks tied to a roadmap version:
     "name": "My app",
     "description": "...",
     "url": "https://example.com",
+    "themes": [
+      { "id": 2, "name": "Platform", "color": "#3b82f6", "sort_order": 1 }
+    ],
     "versions": [
       { "id": 4, "name": "v1.0", "target_date": "2026-06-01" }
     ]
@@ -85,7 +88,15 @@ Use this when you need **`version_id`** for tasks tied to a roadmap version:
 
 If you are not another user’s collaborator, requests for someone else’s `project` id return **403 Forbidden**.
 
-## 3. Add a project link (URL)
+### Create, update, and delete a project
+
+`POST /api/projects` — JSON: `name` (required), optional `description`, `url`. Returns `201` with `data`. **Project-scoped tokens cannot create projects** (403, message: `Project-scoped tokens cannot create projects.`).
+
+`PATCH /api/projects/{project}` — optional `name`, `description`, `url`, `archived_at` (nullable date).
+
+`DELETE /api/projects/{project}` — `204 No Content`.
+
+## 3. Project links (URLs)
 
 Pins a URL on the project’s **Links** tab (same as the web UI).
 
@@ -104,7 +115,13 @@ curl -sS -X POST "https://your-domain.test/api/projects/1/links" \
   -d '{"url":"https://github.com/org/repo","title":"Main repo"}'
 ```
 
-## 4. Add a wishlist idea
+`GET /api/projects/{project}/links` — list pinned links.
+
+`PATCH /api/projects/{project}/links/{link}` — optional `url`, `title`.
+
+`DELETE /api/projects/{project}/links/{link}` — `204 No Content`.
+
+## 4. Wishlist ideas
 
 `POST /api/projects/{project}/wishlist-items`
 
@@ -123,7 +140,21 @@ curl -sS -X POST "https://your-domain.test/api/projects/1/wishlist-items" \
   -d '{"title":"Read later","notes":"https://example.com/article"}'
 ```
 
-## 5. Create a task
+`GET /api/projects/{project}/wishlist-items` — list items.
+
+`PATCH /api/projects/{project}/wishlist-items/{wishlist_item}` — optional `title`, `notes`, `sort_order`.
+
+`DELETE /api/projects/{project}/wishlist-items/{wishlist_item}` — `204 No Content`.
+
+## 5. Tasks
+
+### List and get
+
+`GET /api/projects/{project}/tasks` — all tasks for the project (task payload per row).
+
+`GET /api/projects/{project}/tasks/{task}` — one task; if the task belongs to another project, **404**.
+
+### Create a task
 
 `POST /api/projects/{project}/tasks`
 
@@ -199,7 +230,25 @@ curl -sS -X PATCH "https://your-domain.test/api/projects/1/tasks/12" \
 
 `DELETE /api/projects/{project}/tasks/{task}` — returns `204 No Content`.
 
-## 6. Activity changelog
+## 6. Roadmap versions
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/projects/{project}/versions` | List versions |
+| `POST` | `/api/projects/{project}/versions` | Create (`name` required; optional `description`, `target_date`, `released_at`, `release_notes`, `sort_order`) |
+| `PATCH` | `/api/projects/{project}/versions/{version}` | Update |
+| `DELETE` | `/api/projects/{project}/versions/{version}` | Delete (`204`) |
+
+## 7. Roadmap themes
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/projects/{project}/themes` | List themes |
+| `POST` | `/api/projects/{project}/themes` | Create (`name` required; optional `color`, `sort_order`) |
+| `PATCH` | `/api/projects/{project}/themes/{theme}` | Update |
+| `DELETE` | `/api/projects/{project}/themes/{theme}` | Delete (`204`) |
+
+## 8. Activity changelog
 
 `GET /api/changelog`
 
@@ -210,28 +259,47 @@ Query params:
 
 Returns newest-first rows: `source`, `action`, `summary`, `meta` (JSON), `project_id`, `created_at`.
 
-Creating a **task**, **wishlist item**, or **project link** via the API appends a changelog row. Unknown `X-Waypost-Source` values are stored as `api`.
+Creating or updating **projects**, **tasks**, **wishlist items**, **links**, **roadmap versions**, or **roadmap themes** via the API can append changelog rows. Unknown `X-Waypost-Source` values are stored as `api`.
 
-## 7. Quick reference
+## 9. Quick reference
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/api/changelog` | Recent activity (tasks, wishlist, links) |
-| `GET` | `/api/projects` | List projects (`id`, `name`, `description`, `url`) |
-| `GET` | `/api/projects/{project}` | Project + `versions` for `version_id` |
-| `POST` | `/api/projects/{project}/links` | Add pinned URL |
-| `POST` | `/api/projects/{project}/wishlist-items` | Add wishlist idea |
+| `GET` | `/api/changelog` | Recent activity |
+| `GET` | `/api/projects` | List projects |
+| `POST` | `/api/projects` | Create project (not with scoped token) |
+| `GET` | `/api/projects/{project}` | Project + `themes` + `versions` |
+| `PATCH` | `/api/projects/{project}` | Update project |
+| `DELETE` | `/api/projects/{project}` | Delete project |
+| `GET` | `/api/projects/{project}/links` | List links |
+| `POST` | `/api/projects/{project}/links` | Add link |
+| `PATCH` | `/api/projects/{project}/links/{link}` | Update link |
+| `DELETE` | `/api/projects/{project}/links/{link}` | Delete link |
+| `GET` | `/api/projects/{project}/wishlist-items` | List wishlist |
+| `POST` | `/api/projects/{project}/wishlist-items` | Add wishlist item |
+| `PATCH` | `/api/projects/{project}/wishlist-items/{wishlist_item}` | Update wishlist item |
+| `DELETE` | `/api/projects/{project}/wishlist-items/{wishlist_item}` | Delete wishlist item |
+| `GET` | `/api/projects/{project}/tasks` | List tasks |
+| `GET` | `/api/projects/{project}/tasks/{task}` | Get one task |
 | `POST` | `/api/projects/{project}/tasks` | Create task |
-| `PATCH` | `/api/projects/{project}/tasks/{task}` | Update task (planning, OKR, board fields, etc.) |
+| `PATCH` | `/api/projects/{project}/tasks/{task}` | Update task |
 | `DELETE` | `/api/projects/{project}/tasks/{task}` | Delete task |
+| `GET` | `/api/projects/{project}/versions` | List roadmap versions |
+| `POST` | `/api/projects/{project}/versions` | Create version |
+| `PATCH` | `/api/projects/{project}/versions/{version}` | Update version |
+| `DELETE` | `/api/projects/{project}/versions/{version}` | Delete version |
+| `GET` | `/api/projects/{project}/themes` | List roadmap themes |
+| `POST` | `/api/projects/{project}/themes` | Create theme |
+| `PATCH` | `/api/projects/{project}/themes/{theme}` | Update theme |
+| `DELETE` | `/api/projects/{project}/themes/{theme}` | Delete theme |
 
-## 8. CORS and browser extensions
+## 10. CORS and browser extensions
 
 Calls from **another website’s JavaScript** may be blocked by the browser until CORS allows your origin. Typical setups:
 
 - **Server-side** script, **curl**, or **extension background/service worker**: no CORS issue for simple Bearer requests.
 - **Bookmarklet or page script** on arbitrary sites: configure Laravel CORS to allow your origins, or proxy through your own backend.
 
-## 9. Revoking access
+## 11. Revoking access
 
 In **Profile → API tokens**, revoke a token to invalidate it immediately.

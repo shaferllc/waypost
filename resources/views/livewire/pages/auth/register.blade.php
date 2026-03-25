@@ -45,6 +45,25 @@ new #[Layout('layouts.guest')] class extends Component
         <p class="mt-1 text-sm text-ink/70">{{ __('Start organizing projects on :app.', ['app' => config('app.name')]) }}</p>
     </div>
 
+    @if (session('oauth_error'))
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
+            {{ session('oauth_error') }}
+        </div>
+    @endif
+
+    <x-oauth-providers class="mb-6" />
+
+    @if (\App\View\Components\OauthProviders::isEnabled())
+        <div class="relative mb-6">
+            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                <div class="w-full border-t border-cream-300"></div>
+            </div>
+            <div class="relative flex justify-center text-xs uppercase tracking-wide">
+                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or with email') }}</span>
+            </div>
+        </div>
+    @endif
+
     <form wire:submit="register" class="space-y-4">
         <div>
             <x-input-label for="name" :value="__('Name')" />

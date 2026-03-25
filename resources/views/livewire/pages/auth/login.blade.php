@@ -1,7 +1,10 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -16,7 +19,35 @@ new #[Layout('layouts.guest')] class extends Component
     {
         $this->validate();
 
-        $this->form->authenticate();
+        $this->form->ensureIsNotRateLimited();
+
+        if (! Auth::attempt($this->form->only(['email', 'password']), $this->form->remember)) {
+            RateLimiter::hit($this->form->throttleKey());
+
+            throw ValidationException::withMessages([
+                'form.email' => trans('auth.failed'),
+            ]);
+        }
+
+        $user = Auth::user();
+        assert($user !== null);
+
+        if ($user->hasTwoFactorEnabled()) {
+            Auth::logout();
+
+            Session::put([
+                'two_factor.id' => $user->id,
+                'two_factor.remember' => $this->form->remember,
+            ]);
+            Session::regenerateToken();
+            RateLimiter::clear($this->form->throttleKey());
+
+            $this->redirect(route('two-factor.challenge', absolute: false), navigate: false);
+
+            return;
+        }
+
+        RateLimiter::clear($this->form->throttleKey());
 
         Session::regenerate();
 
@@ -31,6 +62,25 @@ new #[Layout('layouts.guest')] class extends Component
     </div>
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
+
+    @if (session('oauth_error'))
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
+            {{ session('oauth_error') }}
+        </div>
+    @endif
+
+    <x-oauth-providers class="mb-6" />
+
+    @if (\App\View\Components\OauthProviders::isEnabled())
+        <div class="relative mb-6">
+            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                <div class="w-full border-t border-cream-300"></div>
+            </div>
+            <div class="relative flex justify-center text-xs uppercase tracking-wide">
+                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or with email') }}</span>
+            </div>
+        </div>
+    @endif
 
     <form wire:submit="login" class="space-y-4">
         <div>

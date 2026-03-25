@@ -70,4 +70,22 @@ class ProjectScopedTokenApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(2, 'data');
     }
+
+    public function test_scoped_token_cannot_create_project(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Scoped home',
+        ]);
+
+        $plain = app(ProjectCursorTokenIssuer::class)->issue($project, $user);
+
+        $this->withToken($plain)
+            ->postJson('/api/projects', [
+                'name' => 'Another project',
+            ])
+            ->assertForbidden()
+            ->assertJsonFragment(['message' => 'Project-scoped tokens cannot create projects.']);
+    }
 }
