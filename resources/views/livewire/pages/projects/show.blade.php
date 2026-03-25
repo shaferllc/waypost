@@ -16,6 +16,8 @@ use App\Models\TaskComment;
 use App\Models\TaskLink;
 use App\Models\WishlistItem;
 use App\Services\ProjectCursorTokenIssuer;
+use App\Support\WaypostCursorArtifacts;
+use App\Support\WaypostEditorMcpInstall;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -147,6 +149,9 @@ class extends Component
 
     public ?string $revealedCursorToken = null;
 
+    /** @var 'cursor'|'vscode'|'vscode_insiders'|'other' */
+    public string $syncEditor = 'cursor';
+
     public function mount(Project $project): void
     {
         $this->authorize('view', $project);
@@ -219,23 +224,34 @@ class extends Component
     }
 
     #[Computed]
-    public function mcpConfigSnippet(): string
+    public function syncMcpCopySnippet(): string
     {
-        $base = rtrim((string) config('app.url'), '/');
+        return match ($this->syncEditor) {
+            'vscode', 'vscode_insiders' => WaypostEditorMcpInstall::vscodeMcpJsonSnippet($this->project),
+            default => WaypostCursorArtifacts::mcpServersSnippetJson($this->project),
+        };
+    }
 
-        return json_encode([
-            'mcpServers' => [
-                'waypost' => [
-                    'command' => 'node',
-                    'args' => ['/ABSOLUTE/PATH/TO/mcp/waypost-server/dist/index.js'],
-                    'env' => [
-                        'WAYPOST_BASE_URL' => $base,
-                        'WAYPOST_PROJECT_ID' => (string) $this->projectId,
-                        'WAYPOST_API_TOKEN' => 'PASTE_YOUR_PROJECT_TOKEN',
-                    ],
-                ],
-            ],
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    #[Computed]
+    public function syncMcpInstallHref(): ?string
+    {
+        return match ($this->syncEditor) {
+            'cursor' => WaypostCursorArtifacts::cursorMcpInstallUrl($this->project),
+            'vscode' => WaypostEditorMcpInstall::vscodeMcpInstallUrl($this->project, false),
+            'vscode_insiders' => WaypostEditorMcpInstall::vscodeMcpInstallUrl($this->project, true),
+            default => null,
+        };
+    }
+
+    #[Computed]
+    public function syncInstallButtonLabel(): string
+    {
+        return match ($this->syncEditor) {
+            'cursor' => 'Cursor',
+            'vscode' => 'VS Code',
+            'vscode_insiders' => 'VS Code Insiders',
+            default => '',
+        };
     }
 
     #[Computed]
@@ -1407,7 +1423,7 @@ class extends Component
 
         <div class="border-b border-cream-300">
             <nav class="-mb-px flex gap-1 overflow-x-auto pb-px" aria-label="Project sections">
-                @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'okrs' => 'OKRs', 'wishlist' => 'Wishlist', 'links' => 'Links', 'settings' => 'Settings'] as $key => $label)
+                @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'okrs' => 'OKRs', 'wishlist' => 'Wishlist', 'links' => 'Links', 'sync' => 'Sync', 'settings' => 'Settings'] as $key => $label)
                     <button
                         type="button"
                         wire:click="$set('tab', '{{ $key }}')"
@@ -1422,81 +1438,129 @@ class extends Component
             </nav>
         </div>
 
-        @can('view', $this->project)
-            <div class="rounded-xl border border-sage-light/50 bg-sage-light/10 p-4 sm:p-5">
-                <h2 class="text-sm font-semibold text-ink">Sync with Cursor &amp; this directory</h2>
-                <p class="mt-1 text-sm text-ink/70 max-w-3xl">
-                    <strong>Fastest:</strong> download the setup ZIP and extract it to your <strong>repository root</strong> (the folder you open in Cursor). It includes
-                    <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code>, the AI activity
-                    <code class="rounded bg-cream-200 px-1 text-xs">.cursor/rules</code> file, and a short README. Then copy your <strong>project API token</strong> from below (or rotate to reveal one), paste it into
-                    <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code> as <code class="rounded bg-cream-200 px-1 text-xs">api_token</code> or into MCP env as
-                    <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code> — never commit secrets.
-                    Use <strong>Copy MCP config</strong> and merge into Cursor <strong>Settings → MCP</strong> (fix the <code class="rounded bg-cream-200 px-1 text-xs">args</code> path to your <code class="rounded bg-cream-200 px-1 text-xs">mcp/waypost-server/dist/index.js</code>).
-                    Profile tokens work for all projects; this project’s scoped token is created automatically when you open Sync here.
-                </p>
-                @if ($this->revealedCursorToken)
-                    <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50/90 p-3">
-                        <p class="text-sm font-medium text-ink">Copy this token now — it will not be shown again until you rotate.</p>
-                        <code class="mt-2 block select-all break-all rounded bg-white p-2 text-xs text-ink ring-1 ring-cream-300">{{ $this->revealedCursorToken }}</code>
-                        <div class="mt-2 flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                wire:click="dismissRevealedCursorToken"
-                                class="text-sm font-medium text-ink/70 hover:text-ink"
-                            >
-                                Hide
-                            </button>
-                        </div>
+        @if ($this->tab === 'sync')
+            @can('view', $this->project)
+                <div class="rounded-xl border border-sage-light/50 bg-sage-light/10 p-4 sm:p-5" wire:key="tab-sync">
+                    <h2 class="text-sm font-semibold text-ink">Sync with your editor</h2>
+                    <p class="mt-1 text-sm text-ink/70 max-w-3xl">
+                        Choose your editor for the right <strong>install link</strong> and <strong>paste-ready MCP JSON</strong>. Download the bundle for
+                        <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code>, a Cursor rules file under
+                        <code class="rounded bg-cream-200 px-1 text-xs">.cursor/rules</code>, and a short README — extract to your <strong>repository root</strong>.
+                        Use your <strong>project API token</strong> in <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code> as
+                        <code class="rounded bg-cream-200 px-1 text-xs">api_token</code> or in MCP env as
+                        <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code> — never commit secrets.
+                        Fix the <code class="rounded bg-cream-200 px-1 text-xs">args</code> path to your
+                        <code class="rounded bg-cream-200 px-1 text-xs">mcp/waypost-server/dist/index.js</code> after install.
+                    </p>
+
+                    <div class="mt-4 flex flex-col gap-2 sm:max-w-md">
+                        <label for="sync-editor" class="text-xs font-semibold uppercase tracking-wide text-ink/60">Editor</label>
+                        <select
+                            id="sync-editor"
+                            wire:model.live="syncEditor"
+                            class="rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
+                        >
+                            <option value="cursor">Cursor</option>
+                            <option value="vscode">Visual Studio Code</option>
+                            <option value="vscode_insiders">VS Code Insiders</option>
+                            <option value="other">Other (Claude Desktop, Windsurf, …)</option>
+                        </select>
                     </div>
-                @endif
-                <div class="mt-3 flex flex-wrap items-center gap-3">
-                    <a
-                        href="{{ route('projects.waypost-cursor-setup', $this->project) }}"
-                        class="inline-flex items-center rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark"
-                    >
-                        Download Cursor setup (ZIP)
-                    </a>
-                    <button
-                        type="button"
-                        x-data="{ copied: false }"
-                        @click="navigator.clipboard.writeText(@js($this->mcpConfigSnippet)); copied = true; setTimeout(() => copied = false, 2000)"
-                        class="inline-flex items-center rounded-lg border border-sage-dark/30 bg-white px-4 py-2 text-sm font-semibold text-sage-deeper shadow-sm hover:bg-cream-50"
-                    >
-                        <span x-text="copied ? 'Copied!' : 'Copy MCP config'"></span>
-                    </button>
-                    <span class="text-xs text-ink/50">Separate:</span>
-                    <a
-                        href="{{ route('projects.cursor-rule.agent-activity', $this->project) }}"
-                        download
-                        class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline"
-                    >
-                        Rule only
-                    </a>
-                    <a
-                        href="{{ route('projects.waypost-manifest', $this->project) }}"
-                        download
-                        class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline"
-                    >
-                        waypost.json only
-                    </a>
-                    @can('update', $this->project)
+
+                    @if ($this->syncEditor === 'cursor')
+                        <p class="mt-3 text-sm text-ink/70 max-w-3xl">
+                            <strong>Cursor</strong> uses <code class="rounded bg-cream-200 px-1 text-xs">cursor://…/mcp/install</code>. Use <strong>Install in Cursor</strong> or merge the copied JSON into <strong>Settings → MCP</strong>.
+                        </p>
+                    @elseif ($this->syncEditor === 'vscode' || $this->syncEditor === 'vscode_insiders')
+                        <p class="mt-3 text-sm text-ink/70 max-w-3xl">
+                            <strong>VS Code</strong> uses <code class="rounded bg-cream-200 px-1 text-xs">vscode:mcp/install</code>
+                            @if ($this->syncEditor === 'vscode_insiders')
+                                (Insiders: <code class="rounded bg-cream-200 px-1 text-xs">vscode-insiders:mcp/install</code>)
+                            @endif
+                            per Microsoft’s MCP docs. Copied JSON matches workspace or user <code class="rounded bg-cream-200 px-1 text-xs">mcp.json</code> (<code class="rounded bg-cream-200 px-1 text-xs">servers.waypost</code>). The rule download is Cursor MDC format — adapt for VS Code instructions if needed.
+                        </p>
+                    @else
+                        <p class="mt-3 text-sm text-ink/70 max-w-3xl">
+                            <strong>Other assistants:</strong> there is no shared web → editor install URL. Use <strong>Copy MCP config</strong> and add the server in your tool’s MCP settings (often the same <code class="rounded bg-cream-200 px-1 text-xs">mcpServers</code> shape as Cursor / Claude Desktop).
+                        </p>
+                    @endif
+
+                    @if ($this->revealedCursorToken)
+                        <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50/90 p-3">
+                            <p class="text-sm font-medium text-ink">Copy this token now — it will not be shown again until you rotate.</p>
+                            <code class="mt-2 block select-all break-all rounded bg-white p-2 text-xs text-ink ring-1 ring-cream-300">{{ $this->revealedCursorToken }}</code>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    wire:click="dismissRevealedCursorToken"
+                                    class="text-sm font-medium text-ink/70 hover:text-ink"
+                                >
+                                    Hide
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+                    <div class="mt-3 flex flex-wrap items-center gap-3">
+                        @if ($this->syncMcpInstallHref)
+                            <a
+                                href="{{ $this->syncMcpInstallHref }}"
+                                class="inline-flex items-center rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark"
+                            >
+                                Install in {{ $this->syncInstallButtonLabel }} (MCP)
+                            </a>
+                        @endif
+                        <a
+                            href="{{ route('projects.waypost-cursor-setup', $this->project) }}"
+                            @class([
+                                'inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold shadow transition-colors',
+                                'bg-sage text-white hover:bg-sage-dark' => ! $this->syncMcpInstallHref,
+                                'border border-sage-dark/30 bg-white text-sage-deeper shadow-sm hover:bg-cream-50' => $this->syncMcpInstallHref,
+                            ])
+                        >
+                            Download setup bundle (ZIP)
+                        </a>
                         <button
                             type="button"
-                            wire:click="rotateCursorToken"
-                            class="text-sm font-semibold text-sage-dark hover:text-sage-deeper underline"
+                            x-data="{ copied: false }"
+                            @click="navigator.clipboard.writeText(@js($this->syncMcpCopySnippet)); copied = true; setTimeout(() => copied = false, 2000)"
+                            class="inline-flex items-center rounded-lg border border-sage-dark/30 bg-white px-4 py-2 text-sm font-semibold text-sage-deeper shadow-sm hover:bg-cream-50"
                         >
-                            Rotate project API token
+                            <span x-text="copied ? 'Copied!' : 'Copy MCP config'"></span>
                         </button>
-                    @endcan
-                    <a href="{{ route('docs.api') }}" wire:navigate class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline">
-                        API &amp; MCP docs
-                    </a>
+                        <span class="text-xs text-ink/50">Separate:</span>
+                        <a
+                            href="{{ route('projects.cursor-rule.agent-activity', $this->project) }}"
+                            download
+                            class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline"
+                        >
+                            Rule only
+                        </a>
+                        <a
+                            href="{{ route('projects.waypost-manifest', $this->project) }}"
+                            download
+                            class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline"
+                        >
+                            waypost.json only
+                        </a>
+                        @can('update', $this->project)
+                            <button
+                                type="button"
+                                wire:click="rotateCursorToken"
+                                class="text-sm font-semibold text-sage-dark hover:text-sage-deeper underline"
+                            >
+                                Rotate project API token
+                            </button>
+                        @endcan
+                        <a href="{{ route('docs.api') }}" wire:navigate class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline">
+                            API &amp; MCP docs
+                        </a>
+                    </div>
+                    <p class="mt-3 text-xs text-ink/55 font-mono break-all">
+                        MCP env: <span class="select-all">WAYPOST_BASE_URL={{ rtrim(config('app.url'), '/') }}</span>
+                    </p>
                 </div>
-                <p class="mt-3 text-xs text-ink/55 font-mono break-all">
-                    MCP env: <span class="select-all">WAYPOST_BASE_URL={{ rtrim(config('app.url'), '/') }}</span>
-                </p>
-            </div>
-        @endcan
+            @endcan
+        @endif
 
         {{-- Kanban --}}
         @if ($this->tab === 'board')
