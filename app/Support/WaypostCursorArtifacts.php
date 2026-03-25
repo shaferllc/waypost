@@ -7,30 +7,43 @@ use App\Models\Project;
 final class WaypostCursorArtifacts
 {
     /**
-     * Script path passed to `node`. Cursor and VS Code substitute ${workspaceFolder} with the
-     * opened workspace root, so `mcp/waypost-server` should live under that folder with
-     * `dist/index.js` built (`npm install && npm run build`). For global MCP with no workspace,
-     * users should replace this with an absolute path to `dist/index.js`.
+     * Directory containing package.json for @waypost/mcp-server, relative to the opened workspace root.
      */
-    public const MCP_SERVER_SCRIPT_ARG = '${workspaceFolder}/mcp/waypost-server/dist/index.js';
+    public const MCP_SERVER_PACKAGE_DIR = 'mcp/waypost-server';
 
     /**
      * Single-server MCP definition for Cursor Settings → MCP / install deeplinks (not the mcpServers wrapper).
      *
-     * @return array{command: string, args: list<string>, env: array<string, string>}
+     * Default: {@see config('waypost.mcp_npm_package')} so editors run `npx -y @scope/pkg@version` — no local
+     * clone or npm install in the user’s project (package must be published to npm).
+     *
+     * If `waypost.mcp_npm_package` is empty, uses tsx + {@see self::MCP_SERVER_PACKAGE_DIR} for maintainers.
+     *
+     * @return array{command: string, args: list<string>, env: array<string, string>, cwd?: string}
      */
     public static function mcpServerConfig(Project $project): array
     {
         $base = rtrim((string) config('app.url'), '/');
+        $env = [
+            'WAYPOST_BASE_URL' => $base,
+            'WAYPOST_PROJECT_ID' => (string) $project->id,
+            'WAYPOST_API_TOKEN' => 'PASTE_YOUR_PROJECT_TOKEN',
+        ];
+
+        $spec = trim((string) config('waypost.mcp_npm_package', '@waypost/mcp-server@1.0.0'));
+        if ($spec === '') {
+            return [
+                'command' => 'npx',
+                'args' => ['tsx', 'src/index.ts'],
+                'cwd' => '${workspaceFolder}/'.self::MCP_SERVER_PACKAGE_DIR,
+                'env' => $env,
+            ];
+        }
 
         return [
-            'command' => 'node',
-            'args' => [self::MCP_SERVER_SCRIPT_ARG],
-            'env' => [
-                'WAYPOST_BASE_URL' => $base,
-                'WAYPOST_PROJECT_ID' => (string) $project->id,
-                'WAYPOST_API_TOKEN' => 'PASTE_YOUR_PROJECT_TOKEN',
-            ],
+            'command' => 'npx',
+            'args' => ['-y', $spec],
+            'env' => $env,
         ];
     }
 
@@ -47,7 +60,7 @@ final class WaypostCursorArtifacts
     }
 
     /**
-     * Cursor deeplink to register this MCP server (user still fixes args path and sets WAYPOST_API_TOKEN).
+     * Cursor deeplink to register this MCP server (user still sets WAYPOST_API_TOKEN in MCP env).
      *
      * @see https://cursor.com/docs/context/mcp/install-links
      */
@@ -125,9 +138,9 @@ Waypost + Cursor — quick setup
    - .cursor/rules/waypost-agent-activity.mdc
    - this file (WAYPOST-CURSOR-README.txt)
 
-2. Copy the folder mcp/waypost-server from the Waypost application source into this same
-   repository root (next to waypost.json). Then run:
-     cd mcp/waypost-server && npm install && npm run build
+2. MCP install from the Sync tab uses npx to run the published npm package @waypost/mcp-server
+   (no copy of mcp/waypost-server into this repo required). If your Waypost admin uses local mode
+   instead, copy mcp/waypost-server here and run npm install inside it.
 
 3. In Waypost (browser), open this project → Sync tab → reveal or rotate the project API token
    and copy it.
@@ -136,10 +149,9 @@ Waypost + Cursor — quick setup
    - into waypost.json as "api_token" (local only; do not commit), OR
    - into your editor MCP env as WAYPOST_API_TOKEN (recommended).
 
-5. Use the project Sync tab → Install in editor (MCP) or Copy MCP config. The default args
-   use \${workspaceFolder}/mcp/waypost-server/dist/index.js — open your repository root as the
-   workspace so that resolves. If you use only user-level MCP with no folder open, set args to
-   the absolute path to dist/index.js instead.
+5. Use the project Sync tab → Install in editor (MCP) or Copy MCP config. With the npm package,
+   command is npx -y @waypost/mcp-server@… (no cwd). Local-mode installs use cwd under
+   mcp/waypost-server instead.
 
 6. Reload MCP / restart the editor if needed.
 

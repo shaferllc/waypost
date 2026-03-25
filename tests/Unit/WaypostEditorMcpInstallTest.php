@@ -62,4 +62,24 @@ class WaypostEditorMcpInstallTest extends TestCase
         $this->assertSame('stdio', $parsed['servers']['waypost']['type'] ?? null);
         $this->assertSame(WaypostCursorArtifacts::mcpServerConfig($project), array_diff_key($parsed['servers']['waypost'], ['type' => true]));
     }
+
+    public function test_mcp_server_config_uses_local_workspace_when_npm_package_empty(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Demo',
+        ]);
+
+        config([
+            'app.url' => 'https://app.test',
+            'waypost.mcp_npm_package' => '',
+        ]);
+
+        $cfg = WaypostCursorArtifacts::mcpServerConfig($project);
+        $this->assertSame('npx', $cfg['command']);
+        $this->assertSame(['tsx', 'src/index.ts'], $cfg['args']);
+        $this->assertArrayHasKey('cwd', $cfg);
+        $this->assertStringContainsString('mcp/waypost-server', (string) $cfg['cwd']);
+    }
 }

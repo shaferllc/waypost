@@ -14,7 +14,7 @@ final class WaypostEditorMcpInstall
     /**
      * Payload for VS Code / VS Code Insiders `vscode:mcp/install?…` handler.
      *
-     * @return array{name: string, command: string, args: list<string>, env: array<string, string>}
+     * @return array{name: string, command: string, args: list<string>, env: array<string, string>, cwd?: string}
      */
     public static function vscodeInstallPayload(Project $project): array
     {
