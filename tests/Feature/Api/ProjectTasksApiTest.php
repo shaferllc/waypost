@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\OkrGoal;
 use App\Models\OkrObjective;
 use App\Models\Project;
+use App\Models\ProjectActivity;
 use App\Models\RoadmapVersion;
 use App\Models\Task;
 use App\Models\User;
@@ -43,6 +44,36 @@ class ProjectTasksApiTest extends TestCase
             'status' => 'todo',
             'position' => 1,
         ]);
+    }
+
+    public function test_store_task_records_client_source_and_changelog_when_x_waypost_source_ai(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'API',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(
+            "/api/projects/{$project->id}/tasks",
+            ['title' => 'From assistant'],
+            ['X-Waypost-Source' => 'ai'],
+        )->assertCreated();
+
+        $this->assertDatabaseHas('changelog_entries', [
+            'project_id' => $project->id,
+            'source' => 'ai',
+            'action' => 'task.created',
+        ]);
+
+        $activity = ProjectActivity::query()
+            ->where('project_id', $project->id)
+            ->where('action', 'task.created')
+            ->firstOrFail();
+
+        $this->assertSame('ai', $activity->properties['client_source'] ?? null);
     }
 
     public function test_store_task_respects_status_and_version(): void

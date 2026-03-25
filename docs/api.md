@@ -2,7 +2,7 @@
 
 In the app (signed in): open **API docs** in the top nav or go to `/docs/api`.
 
-**Cursor / MCP:** see `mcp/waypost-server/README.md`. The MCP server calls your Waypost app over **HTTP** (`WAYPOST_BASE_URL` + `/api/...`). Dedicated tools cover common actions; **`waypost_http_request`** exposes **full CRUD** for any JSON endpoint (same Bearer token and `X-Waypost-Source: mcp`).
+**Cursor / MCP:** see `mcp/waypost-server/README.md`. The MCP server calls your Waypost app over **HTTP** (`WAYPOST_BASE_URL` + `/api/...`). Dedicated tools cover common actions; **`waypost_http_request`** exposes **full CRUD** for any JSON endpoint (same Bearer token and **`X-Waypost-Source`**, usually from **`waypost.json`** → `x_waypost_source`, default **`ai`**).
 
 Personal API for your account: **full CRUD** on **projects**, **roadmap versions**, **roadmap themes**, **pinned links**, **wishlist ideas**, and **tasks** (including **OKR links**, **initiative dates**, and **planning status**). All routes require a **Sanctum personal access token** (Bearer).
 
@@ -18,7 +18,9 @@ Base path: `/api` (e.g. `https://your-domain.test/api/projects`).
 
 Each project can have a **scoped** token created automatically when you create the project or first open it (if you can edit the project). Copy it from the **Sync with Cursor & this directory** panel on the project page, or from the banner right after **Create project**. That token only works for **that** project’s API routes and changelog. Rotate it from the same panel if needed.
 
-Download **`waypost.json`** from the project page for `api_base` and `project_id`. You can paste the token into MCP as `WAYPOST_API_TOKEN`, or add an `api_token` field to `waypost.json` **locally** — do **not** commit secrets.
+Download **`waypost.json`** from the project page for `api_base`, `project_id`, and **`x_waypost_source`** (default `ai` — send that value as **`X-Waypost-Source`** on mutating API calls so edits appear in the project **Recent activity** and changelog). You can paste the token into MCP as `WAYPOST_API_TOKEN`, or add an `api_token` field to `waypost.json` **locally** — do **not** commit secrets. On the server, override the default label with **`WAYPOST_MANIFEST_X_WAYPOST_SOURCE`** in `.env` if needed.
+
+In the web UI, **Download Cursor setup (ZIP)** (signed-in project page) bundles `waypost.json`, **`.cursor/rules/waypost-agent-activity.mdc`**, and a README — extract to your repo root, then add the token and merge **Copy MCP config** into Cursor’s MCP settings.
 
 ### General token (Profile)
 
@@ -37,7 +39,7 @@ Accept: application/json
 Content-Type: application/json
 ```
 
-Optional on **mutating** requests (tasks, wishlist, links): set `X-Waypost-Source` to a short label (`mcp`, `cursor`, `api`, etc.). It is stored on the **changelog** so you can tell Cursor apart from other clients.
+Optional on **mutating** requests: set **`X-Waypost-Source`** to a slug that identifies the client (`cursor`, `github_copilot`, `windsurf`, `claude_code`, `ai`, `mcp`, `api`, `web`, … — see **`supported_agent_types`** in downloadable **waypost.json**, or add custom slugs with **`WAYPOST_EXTRA_CLIENT_SOURCES`**). It is stored on the **changelog** and, for API requests, in project **activity** as `client_source`. Unknown slugs are stored as **`api`**.
 
 API responses are JSON. Unauthenticated requests return `401` with JSON (not an HTML login page).
 
@@ -259,7 +261,22 @@ Query params:
 
 Returns newest-first rows: `source`, `action`, `summary`, `meta` (JSON), `project_id`, `created_at`.
 
-Creating or updating **projects**, **tasks**, **wishlist items**, **links**, **roadmap versions**, or **roadmap themes** via the API can append changelog rows. Unknown `X-Waypost-Source` values are stored as `api`.
+Creating or updating **projects**, **tasks**, **wishlist items**, **links**, **roadmap versions**, or **roadmap themes** via the API can append changelog rows.
+
+### AI assist start / end (monitoring)
+
+`POST /api/projects/{project}/agent-events`
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| `phase` | yes | `start` (assist began) or `end` (assist finished for this turn) |
+| `agent` | no | Which assistant/client (same slug set as `X-Waypost-Source` / `supported_agent_types`). If omitted, inferred from **`X-Waypost-Source`**, else **`api`** |
+| `session_ref` | no | Reuse the same value on start/end to correlate pairs in `meta` |
+| `note` | no | Short label (e.g. user goal), max 500 chars |
+
+Response `201` with `{ "data": { "phase": "…", "agent": "…", "recorded": true } }`. Creates changelog actions **`agent.started`** / **`agent.ended`** (summary includes the agent) and matching **project activity** rows with **`agent`** and **`client_source`** (from the header) when called via the API.
+
+In the web app, use **Download Cursor rule (AI start/end)** on the project **Sync with Cursor** panel to save **`.cursor/rules/waypost-agent-activity.mdc`**. With Waypost MCP, call **`waypost_log_agent_phase`**.
 
 ## 9. Quick reference
 
@@ -292,6 +309,7 @@ Creating or updating **projects**, **tasks**, **wishlist items**, **links**, **r
 | `POST` | `/api/projects/{project}/themes` | Create theme |
 | `PATCH` | `/api/projects/{project}/themes/{theme}` | Update theme |
 | `DELETE` | `/api/projects/{project}/themes/{theme}` | Delete theme |
+| `POST` | `/api/projects/{project}/agent-events` | Log AI assist **start** / **end** (`phase`, optional `session_ref`, `note`) |
 
 ## 10. CORS and browser extensions
 

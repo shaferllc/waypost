@@ -159,6 +159,8 @@ class extends Component
                         Download <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> into this repo’s root. A project API token was created — copy it below for
                         <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">WAYPOST_API_TOKEN</code> or paste into <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> as
                         <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">api_token</code> locally (never commit).
+                        The file includes <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">x_waypost_source</code> so tools can tag AI/API edits in project activity.
+                        On the project page, use <strong>Download Cursor setup (ZIP)</strong> for waypost.json + Cursor rules + README in one step.
                     </p>
                     @if ($this->lastCreatedCursorToken)
                         <code class="mt-3 block select-all break-all rounded bg-white p-2 text-xs text-ink ring-1 ring-cream-300">{{ $this->lastCreatedCursorToken }}</code>

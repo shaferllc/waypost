@@ -4,11 +4,10 @@ namespace App\Services;
 
 use App\Models\ChangelogEntry;
 use App\Models\User;
+use App\Support\WaypostSource;
 
 class ChangelogRecorder
 {
-    private const ALLOWED_SOURCES = ['api', 'mcp', 'web', 'cursor', 'extension'];
-
     public function record(
         User $user,
         string $action,
@@ -17,10 +16,7 @@ class ChangelogRecorder
         ?array $meta = null,
         ?string $source = null,
     ): void {
-        $normalizedSource = strtolower((string) ($source ?? 'api'));
-        if (! in_array($normalizedSource, self::ALLOWED_SOURCES, true)) {
-            $normalizedSource = 'api';
-        }
+        $normalizedSource = WaypostSource::normalize($source ?? 'api');
 
         ChangelogEntry::query()->create([
             'user_id' => $user->id,

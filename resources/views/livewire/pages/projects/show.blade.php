@@ -219,6 +219,26 @@ class extends Component
     }
 
     #[Computed]
+    public function mcpConfigSnippet(): string
+    {
+        $base = rtrim((string) config('app.url'), '/');
+
+        return json_encode([
+            'mcpServers' => [
+                'waypost' => [
+                    'command' => 'node',
+                    'args' => ['/ABSOLUTE/PATH/TO/mcp/waypost-server/dist/index.js'],
+                    'env' => [
+                        'WAYPOST_BASE_URL' => $base,
+                        'WAYPOST_PROJECT_ID' => (string) $this->projectId,
+                        'WAYPOST_API_TOKEN' => 'PASTE_YOUR_PROJECT_TOKEN',
+                    ],
+                ],
+            ],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    #[Computed]
     public function boardTasks()
     {
         $needle = mb_strtolower(trim($this->boardSearch));
@@ -1406,12 +1426,13 @@ class extends Component
             <div class="rounded-xl border border-sage-light/50 bg-sage-light/10 p-4 sm:p-5">
                 <h2 class="text-sm font-semibold text-ink">Sync with Cursor &amp; this directory</h2>
                 <p class="mt-1 text-sm text-ink/70 max-w-3xl">
-                    Save <strong>waypost.json</strong> in your repo root (the folder you open in Cursor). It carries
-                    <code class="rounded bg-cream-200 px-1 text-xs">api_base</code> and
-                    <code class="rounded bg-cream-200 px-1 text-xs">project_id</code>. A <strong>project API token</strong> is created for you automatically
-                    (or use a token from <a href="{{ route('profile') }}" wire:navigate class="text-sage-dark underline font-medium">Profile</a> for every project).
-                    Put the token in MCP env <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code>, or add an
-                    <code class="rounded bg-cream-200 px-1 text-xs">api_token</code> field to <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code> locally — never commit secrets.
+                    <strong>Fastest:</strong> download the setup ZIP and extract it to your <strong>repository root</strong> (the folder you open in Cursor). It includes
+                    <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code>, the AI activity
+                    <code class="rounded bg-cream-200 px-1 text-xs">.cursor/rules</code> file, and a short README. Then copy your <strong>project API token</strong> from below (or rotate to reveal one), paste it into
+                    <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code> as <code class="rounded bg-cream-200 px-1 text-xs">api_token</code> or into MCP env as
+                    <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code> — never commit secrets.
+                    Use <strong>Copy MCP config</strong> and merge into Cursor <strong>Settings → MCP</strong> (fix the <code class="rounded bg-cream-200 px-1 text-xs">args</code> path to your <code class="rounded bg-cream-200 px-1 text-xs">mcp/waypost-server/dist/index.js</code>).
+                    Profile tokens work for all projects; this project’s scoped token is created automatically when you open Sync here.
                 </p>
                 @if ($this->revealedCursorToken)
                     <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50/90 p-3">
@@ -1430,11 +1451,33 @@ class extends Component
                 @endif
                 <div class="mt-3 flex flex-wrap items-center gap-3">
                     <a
-                        href="{{ route('projects.waypost-manifest', $this->project) }}"
-                        download
+                        href="{{ route('projects.waypost-cursor-setup', $this->project) }}"
                         class="inline-flex items-center rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark"
                     >
-                        Download waypost.json
+                        Download Cursor setup (ZIP)
+                    </a>
+                    <button
+                        type="button"
+                        x-data="{ copied: false }"
+                        @click="navigator.clipboard.writeText(@js($this->mcpConfigSnippet)); copied = true; setTimeout(() => copied = false, 2000)"
+                        class="inline-flex items-center rounded-lg border border-sage-dark/30 bg-white px-4 py-2 text-sm font-semibold text-sage-deeper shadow-sm hover:bg-cream-50"
+                    >
+                        <span x-text="copied ? 'Copied!' : 'Copy MCP config'"></span>
+                    </button>
+                    <span class="text-xs text-ink/50">Separate:</span>
+                    <a
+                        href="{{ route('projects.cursor-rule.agent-activity', $this->project) }}"
+                        download
+                        class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline"
+                    >
+                        Rule only
+                    </a>
+                    <a
+                        href="{{ route('projects.waypost-manifest', $this->project) }}"
+                        download
+                        class="text-sm font-medium text-sage-dark hover:text-sage-deeper underline"
+                    >
+                        waypost.json only
                     </a>
                     @can('update', $this->project)
                         <button
@@ -2470,9 +2513,15 @@ class extends Component
 
                 <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
                     <h2 class="text-lg font-semibold text-ink">Recent activity</h2>
-                    <p class="mt-1 text-sm text-ink/55">Latest changes to tasks, OKRs, wishlist, and links in this project (actions performed while signed in).</p>
+                    <p class="mt-1 text-sm text-ink/55">Latest changes to tasks, OKRs, wishlist, and links in this project. API edits are tagged with <code class="rounded bg-cream-200 px-1 text-xs">X-Waypost-Source</code> / <code class="rounded bg-cream-200 px-1 text-xs">x_waypost_source</code> (Cursor, Copilot, Windsurf, etc. — see <code class="rounded bg-cream-200 px-1 text-xs">supported_agent_types</code> in waypost.json).</p>
                     <ul class="mt-4 max-h-80 space-y-2 overflow-y-auto text-sm">
                         @forelse ($this->project->activities as $act)
+                            @php
+                                $actProps = is_array($act->properties) ? $act->properties : [];
+                                $clientSource = $actProps['client_source'] ?? null;
+                                $agentTag = $actProps['agent'] ?? null;
+                                unset($actProps['client_source'], $actProps['agent']);
+                            @endphp
                             <li wire:key="act-{{ $act->id }}" class="rounded-lg border border-cream-200 bg-cream-50/80 px-3 py-2">
                                 <div class="flex flex-wrap items-baseline justify-between gap-2">
                                     <span class="font-mono text-xs font-semibold text-sage-dark">{{ $act->action }}</span>
@@ -2481,8 +2530,20 @@ class extends Component
                                 @if ($act->user)
                                     <p class="mt-1 text-xs text-ink/60">{{ $act->user->name }}</p>
                                 @endif
-                                @if (is_array($act->properties) && $act->properties !== [])
-                                    <p class="mt-1 text-xs text-ink/70">{{ \Illuminate\Support\Str::limit(json_encode($act->properties, JSON_UNESCAPED_UNICODE), 200) }}</p>
+                                @if (is_string($agentTag) && $agentTag !== '')
+                                    <p class="mt-1 flex flex-wrap gap-1">
+                                        <span class="inline-block rounded-md bg-umber/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-umber">{{ $agentTag }}</span>
+                                        @if (is_string($clientSource) && $clientSource !== '' && $clientSource !== $agentTag)
+                                            <span class="inline-block rounded-md bg-sage-light/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sage-deeper">{{ $clientSource }}</span>
+                                        @endif
+                                    </p>
+                                @elseif (is_string($clientSource) && $clientSource !== '')
+                                    <p class="mt-1">
+                                        <span class="inline-block rounded-md bg-sage-light/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sage-deeper">{{ $clientSource }}</span>
+                                    </p>
+                                @endif
+                                @if ($actProps !== [])
+                                    <p class="mt-1 text-xs text-ink/70">{{ \Illuminate\Support\Str::limit(json_encode($actProps, JSON_UNESCAPED_UNICODE), 200) }}</p>
                                 @endif
                             </li>
                         @empty

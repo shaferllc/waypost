@@ -11,6 +11,8 @@ type WaypostManifest = {
   project_name?: string;
   /** Prefer WAYPOST_API_TOKEN in MCP config; never commit this field. */
   api_token?: string;
+  /** Sent as X-Waypost-Source on API calls (changelog + project activity). */
+  x_waypost_source?: string;
 };
 
 function loadWaypostManifest(): WaypostManifest | null {
@@ -66,7 +68,15 @@ if (!token) {
   process.exit(1);
 }
 
-const MCP_SOURCE = "mcp";
+const fromEnvSource =
+  process.env.WAYPOST_X_WAYPOST_SOURCE !== undefined && process.env.WAYPOST_X_WAYPOST_SOURCE !== ""
+    ? process.env.WAYPOST_X_WAYPOST_SOURCE.trim()
+    : undefined;
+const fromManifestSource =
+  typeof manifest?.x_waypost_source === "string" && manifest.x_waypost_source.trim() !== ""
+    ? manifest.x_waypost_source.trim()
+    : undefined;
+const waypostSourceHeader = (fromEnvSource ?? fromManifestSource ?? "mcp").toLowerCase();
 
 const taskStatusSchema = z.enum(["backlog", "todo", "in_progress", "in_review", "done"]);
 
@@ -117,7 +127,7 @@ async function waypostFetch(path: string, init: RequestInit = {}): Promise<unkno
   const headers: Record<string, string> = {
     Accept: "application/json",
     Authorization: `Bearer ${token}`,
-    "X-Waypost-Source": MCP_SOURCE,
+    "X-Waypost-Source": waypostSourceHeader,
     ...(init.headers as Record<string, string> | undefined),
   };
   if (init.body !== undefined) {
@@ -188,7 +198,7 @@ server.registerTool(
   {
     title: "Waypost MCP workspace status",
     description:
-      "Shows resolved API base URL and default project_id from env and/or waypost.json (walks up from cwd). Use after saving waypost.json in the repo root.",
+      "Shows resolved API base URL, default project_id, and X-Waypost-Source (from WAYPOST_X_WAYPOST_SOURCE env or waypost.json x_waypost_source; default mcp).",
     annotations: readAnnotations,
   },
   async () =>
@@ -196,6 +206,9 @@ server.registerTool(
       api_base: baseUrl,
       default_project_id: defaultProjectId ?? null,
       manifest_project_name: manifest?.project_name ?? null,
+      x_waypost_source: waypostSourceHeader,
+      x_waypost_source_from:
+        fromEnvSource !== undefined ? "env" : fromManifestSource !== undefined ? "waypost.json" : "default",
     }),
 );
 
@@ -230,6 +243,51 @@ server.registerTool(
     try {
       const id = requireProjectId(args.project_id);
       return textResult(await waypostFetch(`/projects/${id}`));
+    } catch (e) {
+      return toolError(e instanceof Error ? e.message : String(e));
+    }
+  },
+);
+
+server.registerTool(
+  "waypost_log_agent_phase",
+  {
+    title: "Log AI assist start or end (Waypost activity)",
+    description:
+      "Records when an AI session begins or ends for activity monitoring. Call with phase=start before tool-using work, phase=end after the final reply. Optional agent slug (cursor, copilot, windsurf, claude_code, …) must match waypost.json supported_agent_types; else API returns 422. Reuse session_ref to pair events.",
+    inputSchema: {
+      project_id: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Defaults from waypost.json / WAYPOST_PROJECT_ID"),
+      phase: z.enum(["start", "end"]).describe("start = assist began, end = assist finished for this turn"),
+      agent: z
+        .string()
+        .max(32)
+        .optional()
+        .describe("Client/agent slug, e.g. cursor, github_copilot, windsurf (see waypost.json supported_agent_types)"),
+      session_ref: z.string().max(128).optional().describe("Same id for matching start/end"),
+      note: z.string().max(500).optional().describe("Short label, e.g. user goal"),
+    },
+    annotations: writeAnnotations,
+  },
+  async (args) => {
+    try {
+      const projectId = requireProjectId(args.project_id);
+      const body: Record<string, unknown> = {
+        phase: args.phase,
+        agent: args.agent,
+        session_ref: args.session_ref,
+        note: args.note,
+      };
+      return textResult(
+        await waypostFetch(`/projects/${projectId}/agent-events`, {
+          method: "POST",
+          body: jsonBody(body),
+        }),
+      );
     } catch (e) {
       return toolError(e instanceof Error ? e.message : String(e));
     }

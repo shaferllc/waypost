@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ProjectActivity;
 use App\Models\User;
+use App\Support\WaypostSource;
 
 class ProjectActivityRecorder
 {
@@ -18,6 +19,8 @@ class ProjectActivityRecorder
         ?int $subjectId = null,
         ?array $properties = null,
     ): void {
+        $properties = $this->withApiClientSource($properties);
+
         ProjectActivity::query()->create([
             'project_id' => $projectId,
             'user_id' => $user?->id,
@@ -26,5 +29,21 @@ class ProjectActivityRecorder
             'subject_id' => $subjectId,
             'properties' => $properties,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $properties
+     * @return array<string, mixed>|null
+     */
+    private function withApiClientSource(?array $properties): ?array
+    {
+        if (! request()->is('api/*')) {
+            return $properties;
+        }
+
+        $properties ??= [];
+        $properties['client_source'] = WaypostSource::normalize(request()->header('X-Waypost-Source'));
+
+        return $properties;
     }
 }

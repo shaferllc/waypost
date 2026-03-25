@@ -1,0 +1,57 @@
+---
+description: Log AI assist start/end to Waypost for project activity monitoring
+alwaysApply: true
+---
+
+# Waypost — log AI assist start and end
+
+This repo is linked to **Waypost** project **__PROJECT_NAME__** (id `__PROJECT_ID__`).
+
+## When to log
+
+1. **Start** — At the beginning of a substantive assistant turn when you will use tools, run commands, or do multi-step work for this codebase (not for trivial one-line replies).
+2. **End** — Right before you send your **final** user-visible answer for that turn (after tools are done).
+
+Use the **same** `session_ref` value for the matching start/end pair when you can (e.g. a short random id or timestamp slug) so activity can be correlated in Waypost.
+
+## How to log
+
+### Option A — Waypost MCP (preferred)
+
+If the Waypost MCP server is enabled, call tool **`waypost_log_agent_phase`** with:
+
+- `phase`: `"start"` or `"end"`
+- `agent` (optional): which tool you are (e.g. `cursor`, `copilot`, `windsurf`, `claude_code`) — must be a slug from **`supported_agent_types`** in **waypost.json**; overrides the header for this event
+- `session_ref` (optional): stable id for this assist session
+- `note` (optional): short context (e.g. user goal)
+
+### Option B — HTTP API
+
+`POST __API_BASE__/api/projects/__PROJECT_ID__/agent-events`
+
+Headers:
+
+- `Authorization: Bearer <token>` (project token from **waypost.json** / `WAYPOST_API_TOKEN`, or Profile token)
+- `Content-Type: application/json`
+- `X-Waypost-Source`: set to match your environment — use the same slug as **`x_waypost_source`** in **waypost.json**, or a value from **`supported_agent_types`** (e.g. `cursor`, `github_copilot`, `windsurf`)
+
+Body (JSON):
+
+```json
+{
+  "phase": "start",
+  "agent": "cursor",
+  "session_ref": "optional-stable-id",
+  "note": "optional short label"
+}
+```
+
+`phase` must be `"start"` or `"end"`. Omit `agent` to infer from `X-Waypost-Source` (defaults to `api` if missing).
+
+## Setup
+
+1. Download **waypost.json** from the Waypost project page (API base, project id, token hint).
+2. Save this file as **`.cursor/rules/waypost-agent-activity.mdc`** in this repository (create `.cursor/rules/` if needed).
+3. Configure MCP or env vars per Waypost **API & MCP** docs.
+
+Events appear in the project **Settings → Recent activity** and in **`GET /api/changelog`**.

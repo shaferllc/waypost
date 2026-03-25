@@ -2,11 +2,11 @@
 
 Connect [Cursor](https://cursor.com) (or any MCP client) to your Waypost app so the agent can **create and update tasks** (including OKR links, initiative dates, planning status, tags), **add wishlist ideas**, **pin links**, read an **activity changelog**, and call **any JSON endpoint** on your server.
 
-The server always talks to Waypost over **HTTP** (`WAYPOST_BASE_URL` + `/api/...`) using your **Sanctum personal access token**. It sends `X-Waypost-Source: mcp` on mutating requests so actions are labeled in the changelog. There is no separate local data store.
+The server always talks to Waypost over **HTTP** (`WAYPOST_BASE_URL` + `/api/...`) using your **Sanctum personal access token**. It sends **`X-Waypost-Source`** on mutating requests: from **`WAYPOST_X_WAYPOST_SOURCE`** env, else **`x_waypost_source`** in `waypost.json` (included when you download it from the project — default **`ai`**), else **`mcp`**. That label appears in the API changelog and in the project’s **Recent activity** (`client_source`). There is no separate local data store.
 
 ## Setup
 
-1. **Easiest:** open a project in Waypost and use **Sync with Cursor & this directory** — a **project API token** is created automatically (copy once). Download **`waypost.json`** there for `api_base` and `project_id`. Optionally paste the token into `waypost.json` as `api_token` **locally** (never commit), or set **`WAYPOST_API_TOKEN`** in MCP env.
+1. **Easiest:** open a project in Waypost and use **Sync with Cursor & this directory**. Click **Download Cursor setup (ZIP)** to get `waypost.json`, **`.cursor/rules/waypost-agent-activity.mdc`**, and a README — extract to your repo root. Use **Copy MCP config** for Cursor Settings → MCP (fix the `args` path to `mcp/waypost-server/dist/index.js`). A **project API token** is created automatically (copy once); paste into `waypost.json` as `api_token` **locally** (never commit) or set **`WAYPOST_API_TOKEN`** in MCP env.
 2. **Alternatively:** **Profile → API tokens** for a token that works on every project you own.
 3. From this directory:
 
@@ -40,6 +40,7 @@ Example:
 
 - **`WAYPOST_BASE_URL`**: Your app URL **without** a trailing slash (same as `APP_URL`).
 - **`WAYPOST_API_TOKEN`**: Plaintext Sanctum token (project token from the project page, or a Profile token). If omitted, the server can read **`api_token`** from `waypost.json` (still do not commit that file with secrets).
+- **`WAYPOST_X_WAYPOST_SOURCE`**: Optional override for the `X-Waypost-Source` header (e.g. `ai`, `mcp`, `cursor`). Overrides `x_waypost_source` in `waypost.json`.
 
 Restart Cursor or reload MCP after changes.
 
@@ -47,7 +48,8 @@ Restart Cursor or reload MCP after changes.
 
 | Tool | Purpose |
 |------|---------|
-| `waypost_workspace_status` | Resolved `WAYPOST_BASE_URL` and default `project_id` |
+| `waypost_workspace_status` | Resolved `WAYPOST_BASE_URL`, default `project_id`, and effective `X-Waypost-Source` |
+| `waypost_log_agent_phase` | Log **AI assist start/end** (`phase`: `start` \| `end`) for monitoring — same as **Download Cursor rule** in the app |
 | `waypost_http_request` | **GET/POST/PATCH/DELETE** any path under `/api` (full CRUD: projects, tasks list/delete, links/wishlist CRUD, roadmap versions/themes, etc.) |
 | `waypost_list_projects` | List projects (ids, names, urls) |
 | `waypost_get_project` | Project + roadmap `themes` and `versions` |

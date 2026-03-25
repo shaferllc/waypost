@@ -33,14 +33,21 @@ class WaypostManifestTest extends TestCase
 
         config(['app.url' => 'https://waypost.example.test']);
 
-        $this->actingAs($user)
-            ->get(route('projects.waypost-manifest', $project))
-            ->assertOk()
+        $response = $this->actingAs($user)
+            ->get(route('projects.waypost-manifest', $project));
+
+        $response->assertOk()
             ->assertHeader('content-disposition', 'attachment; filename="waypost.json"')
             ->assertJson([
                 'api_base' => 'https://waypost.example.test',
                 'project_id' => $project->id,
                 'project_name' => 'My product',
+                'x_waypost_source' => 'ai',
             ]);
+
+        $data = $response->json();
+        $this->assertIsArray($data['supported_agent_types'] ?? null);
+        $this->assertContains('cursor', $data['supported_agent_types']);
+        $this->assertContains('windsurf', $data['supported_agent_types']);
     }
 }

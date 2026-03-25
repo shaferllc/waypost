@@ -5,6 +5,8 @@ use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ProjectExportController;
 use App\Http\Controllers\PublicRoadmapController;
 use App\Http\Controllers\TaskAttachmentDownloadController;
+use App\Http\Controllers\WaypostAgentRuleController;
+use App\Http\Controllers\WaypostCursorSetupController;
 use App\Http\Controllers\WaypostManifestController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -38,6 +40,14 @@ Volt::route('projects/{project}', 'pages.projects.show')
 Route::get('projects/{project}/waypost.json', WaypostManifestController::class)
     ->middleware(['auth', 'verified'])
     ->name('projects.waypost-manifest');
+
+Route::get('projects/{project}/cursor-rules/agent-activity.mdc', WaypostAgentRuleController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projects.cursor-rule.agent-activity');
+
+Route::get('projects/{project}/waypost-cursor-setup.zip', WaypostCursorSetupController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projects.waypost-cursor-setup');
 
 Route::get('task-attachments/{taskAttachment}/download', TaskAttachmentDownloadController::class)
     ->middleware(['auth', 'verified'])

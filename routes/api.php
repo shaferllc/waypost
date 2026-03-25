@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\OperatorReadmeController;
 use App\Http\Controllers\Api\OperatorSummaryController;
+use App\Http\Controllers\Api\ProjectAgentEventController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectLinkController;
 use App\Http\Controllers\Api\ProjectRoadmapThemeController;
@@ -24,6 +25,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::patch('projects/{project}', [ProjectController::class, 'update'])
         ->middleware('token.project');
     Route::delete('projects/{project}', [ProjectController::class, 'destroy'])
+        ->middleware('token.project');
+
+    Route::post('projects/{project}/agent-events', [ProjectAgentEventController::class, 'store'])
         ->middleware('token.project');
 
     Route::get('projects/{project}/tasks', [ProjectTaskController::class, 'index'])
