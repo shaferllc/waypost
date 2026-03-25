@@ -7,6 +7,14 @@ use App\Models\Project;
 final class WaypostCursorArtifacts
 {
     /**
+     * Script path passed to `node`. Cursor and VS Code substitute ${workspaceFolder} with the
+     * opened workspace root, so `mcp/waypost-server` should live under that folder with
+     * `dist/index.js` built (`npm install && npm run build`). For global MCP with no workspace,
+     * users should replace this with an absolute path to `dist/index.js`.
+     */
+    public const MCP_SERVER_SCRIPT_ARG = '${workspaceFolder}/mcp/waypost-server/dist/index.js';
+
+    /**
      * Single-server MCP definition for Cursor Settings → MCP / install deeplinks (not the mcpServers wrapper).
      *
      * @return array{command: string, args: list<string>, env: array<string, string>}
@@ -17,7 +25,7 @@ final class WaypostCursorArtifacts
 
         return [
             'command' => 'node',
-            'args' => ['/ABSOLUTE/PATH/TO/mcp/waypost-server/dist/index.js'],
+            'args' => [self::MCP_SERVER_SCRIPT_ARG],
             'env' => [
                 'WAYPOST_BASE_URL' => $base,
                 'WAYPOST_PROJECT_ID' => (string) $project->id,
@@ -117,21 +125,25 @@ Waypost + Cursor — quick setup
    - .cursor/rules/waypost-agent-activity.mdc
    - this file (WAYPOST-CURSOR-README.txt)
 
-2. In Waypost (browser), open this project → "Sync with Cursor" → reveal or rotate the
-   project API token and copy it.
+2. Copy the folder mcp/waypost-server from the Waypost application source into this same
+   repository root (next to waypost.json). Then run:
+     cd mcp/waypost-server && npm install && npm run build
 
-3. Add the token EITHER:
+3. In Waypost (browser), open this project → Sync tab → reveal or rotate the project API token
+   and copy it.
+
+4. Add the token EITHER:
    - into waypost.json as "api_token" (local only; do not commit), OR
-   - into Cursor → Settings → MCP → env as WAYPOST_API_TOKEN (recommended).
+   - into your editor MCP env as WAYPOST_API_TOKEN (recommended).
 
-4. In Cursor → Settings → MCP, merge the JSON from "Copy MCP config" on the project page
-   (or build it yourself). Set "args" to the absolute path of:
-   mcp/waypost-server/dist/index.js
-   inside your Waypost git clone (or your install path).
+5. Use the project Sync tab → Install in editor (MCP) or Copy MCP config. The default args
+   use \${workspaceFolder}/mcp/waypost-server/dist/index.js — open your repository root as the
+   workspace so that resolves. If you use only user-level MCP with no folder open, set args to
+   the absolute path to dist/index.js instead.
 
-5. Reload MCP / restart Cursor if needed.
+6. Reload MCP / restart the editor if needed.
 
-6. Set x_waypost_source in waypost.json (and X-Waypost-Source / agent-events "agent") to match
+7. Set x_waypost_source in waypost.json (and X-Waypost-Source / agent-events "agent") to match
    your assistant: cursor, github_copilot, windsurf, claude_code, etc. See supported_agent_types
    in waypost.json. Add custom slugs on the server with WAYPOST_EXTRA_CLIENT_SOURCES.
 

@@ -6,7 +6,7 @@ The server always talks to Waypost over **HTTP** (`WAYPOST_BASE_URL` + `/api/...
 
 ## Setup
 
-1. **Easiest:** open a project in Waypost and use **Sync with Cursor & this directory**. Click **Download Cursor setup (ZIP)** to get `waypost.json`, **`.cursor/rules/waypost-agent-activity.mdc`**, and a README — extract to your repo root. Use **Copy MCP config** for Cursor Settings → MCP (fix the `args` path to `mcp/waypost-server/dist/index.js`). A **project API token** is created automatically (copy once); paste into `waypost.json` as `api_token` **locally** (never commit) or set **`WAYPOST_API_TOKEN`** in MCP env.
+1. **Easiest:** open a project in Waypost → **Sync** tab. Download the setup ZIP (`waypost.json`, **`.cursor/rules/…`**, README) into your **repo root**. Copy this **`mcp/waypost-server`** folder from the Waypost codebase into the same repo root, then `npm install` and `npm run build` here. Use **Install in … (MCP)** or **Copy MCP config** — defaults use **`${workspaceFolder}/mcp/waypost-server/dist/index.js`**, so open your **repository root** as the editor workspace (or set `args` to an **absolute** path to `dist/index.js` if you use user-level MCP only). A **project API token** is created when you open Sync (copy once); paste into `waypost.json` as `api_token` **locally** (never commit) or set **`WAYPOST_API_TOKEN`** in MCP env.
 2. **Alternatively:** **Profile → API tokens** for a token that works on every project you own.
 3. From this directory:
 
@@ -15,7 +15,7 @@ The server always talks to Waypost over **HTTP** (`WAYPOST_BASE_URL` + `/api/...
    npm run build
    ```
 
-4. Note the **absolute path** to `dist/index.js` (e.g. `/Users/you/Projects/waypost/mcp/waypost-server/dist/index.js`).
+4. Prefer **`${workspaceFolder}/mcp/waypost-server/dist/index.js`** in MCP `args` when your workspace is the repo root; otherwise note an **absolute path** to `dist/index.js`.
 
 ## Cursor
 
@@ -28,7 +28,7 @@ Example:
   "mcpServers": {
     "waypost": {
       "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/waypost/mcp/waypost-server/dist/index.js"],
+      "args": ["${workspaceFolder}/mcp/waypost-server/dist/index.js"],
       "env": {
         "WAYPOST_BASE_URL": "http://127.0.0.1:8000",
         "WAYPOST_API_TOKEN": "paste-your-token-here"
