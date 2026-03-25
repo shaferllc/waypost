@@ -31,7 +31,7 @@ class ProjectPolicy
 
         $role = $project->members()->where('user_id', $user->id)->value('role');
 
-        return in_array($role, ['editor'], true);
+        return in_array($role, ['editor', 'admin'], true);
     }
 
     public function delete(User $user, Project $project): bool
@@ -41,7 +41,13 @@ class ProjectPolicy
 
     public function manageSettings(User $user, Project $project): bool
     {
-        return $this->isOwner($user, $project);
+        if ($this->isOwner($user, $project)) {
+            return true;
+        }
+
+        $role = $project->members()->where('user_id', $user->id)->value('role');
+
+        return $role === 'admin';
     }
 
     private function isOwner(User $user, Project $project): bool

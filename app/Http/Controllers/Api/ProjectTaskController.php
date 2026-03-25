@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\OkrGoal;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,17 @@ class ProjectTaskController extends Controller
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
             'priority' => ['sometimes', 'integer', Rule::in([Task::PRIORITY_LOW, Task::PRIORITY_NORMAL, Task::PRIORITY_HIGH])],
             'due_date' => ['nullable', 'date'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date'],
+            'planning_status' => ['nullable', 'string', Rule::in(Task::PLANNING_STATUSES)],
+            'okr_objective_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('okr_objectives', 'id')->whereIn(
+                    'okr_goal_id',
+                    OkrGoal::query()->where('project_id', $project->id)->pluck('id')
+                ),
+            ],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:64'],
         ]);
@@ -42,6 +54,10 @@ class ProjectTaskController extends Controller
             'assigned_to' => $validated['assigned_to'] ?? null,
             'priority' => $validated['priority'] ?? Task::PRIORITY_NORMAL,
             'due_date' => $validated['due_date'] ?? null,
+            'starts_at' => $validated['starts_at'] ?? null,
+            'ends_at' => $validated['ends_at'] ?? null,
+            'planning_status' => $validated['planning_status'] ?? null,
+            'okr_objective_id' => $validated['okr_objective_id'] ?? null,
             'tags' => $validated['tags'] ?? null,
         ]);
 
@@ -50,10 +66,19 @@ class ProjectTaskController extends Controller
                 'id' => $task->id,
                 'project_id' => $task->project_id,
                 'version_id' => $task->version_id,
+                'theme_id' => $task->theme_id,
+                'okr_objective_id' => $task->okr_objective_id,
+                'assigned_to' => $task->assigned_to,
                 'title' => $task->title,
                 'body' => $task->body,
                 'status' => $task->status,
                 'position' => $task->position,
+                'priority' => $task->priority,
+                'due_date' => $task->due_date?->format('Y-m-d'),
+                'starts_at' => $task->starts_at?->format('Y-m-d'),
+                'ends_at' => $task->ends_at?->format('Y-m-d'),
+                'planning_status' => $task->planning_status,
+                'tags' => $task->tags,
                 'created_at' => $task->created_at?->toIso8601String(),
             ],
         ], 201);
@@ -76,6 +101,17 @@ class ProjectTaskController extends Controller
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
             'priority' => ['sometimes', 'integer', Rule::in([Task::PRIORITY_LOW, Task::PRIORITY_NORMAL, Task::PRIORITY_HIGH])],
             'due_date' => ['nullable', 'date'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date'],
+            'planning_status' => ['nullable', 'string', Rule::in(Task::PLANNING_STATUSES)],
+            'okr_objective_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('okr_objectives', 'id')->whereIn(
+                    'okr_goal_id',
+                    OkrGoal::query()->where('project_id', $project->id)->pluck('id')
+                ),
+            ],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:64'],
         ]);
@@ -95,6 +131,10 @@ class ProjectTaskController extends Controller
                 'position' => $task->position,
                 'priority' => $task->priority,
                 'due_date' => $task->due_date?->format('Y-m-d'),
+                'starts_at' => $task->starts_at?->format('Y-m-d'),
+                'ends_at' => $task->ends_at?->format('Y-m-d'),
+                'planning_status' => $task->planning_status,
+                'okr_objective_id' => $task->okr_objective_id,
                 'tags' => $task->tags,
                 'updated_at' => $task->updated_at?->toIso8601String(),
             ],

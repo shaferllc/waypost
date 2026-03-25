@@ -26,7 +26,8 @@ class ProjectRoadmapTest extends TestCase
             ->assertOk()
             ->assertSee('Board')
             ->assertSee('Roadmap')
-            ->assertSee('Wishlist');
+            ->assertSee('Wishlist')
+            ->assertSee('OKRs');
     }
 
     public function test_kanban_sync_updates_task_status_and_order(): void

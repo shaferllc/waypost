@@ -1,11 +1,16 @@
 <?php
 
+use App\Http\Controllers\Api\OperatorReadmeController;
+use App\Http\Controllers\Api\OperatorSummaryController;
 use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectLinkController;
 use App\Http\Controllers\Api\ProjectTaskController;
 use App\Http\Controllers\Api\ProjectWishlistItemController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('fleet.operator')->get('/operator/summary', [OperatorSummaryController::class, 'show']);
+Route::middleware('fleet.operator')->get('/operator/readme', [OperatorReadmeController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('changelog', [ChangelogController::class, 'index']);

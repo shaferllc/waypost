@@ -70,7 +70,19 @@ function tryInitKanbanFromNode(el) {
 }
 
 document.addEventListener('livewire:init', () => {
-    Livewire.hook('component.init', ({ component }) => {
+    Livewire.hook('component.init', ({ component, cleanup }) => {
+        const pid = component.el?.getAttribute?.('data-echo-project');
+        if (pid && window.Echo) {
+            const privateName = `private-project.${pid}`;
+            window.Echo.private(`project.${pid}`).listen('.updated', () => {
+                component.call('refreshProjectForPoll');
+            });
+            cleanup(() => {
+                if (window.Echo) {
+                    window.Echo.leave(privateName);
+                }
+            });
+        }
         tryInitKanbanFromNode(component.el);
     });
 

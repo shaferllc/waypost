@@ -7,6 +7,7 @@ use App\Models\RoadmapVersion;
 use App\Models\Task;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProjectExportController extends Controller
@@ -19,11 +20,25 @@ class ProjectExportController extends Controller
 
         return response()->streamDownload(function () use ($project): void {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['id', 'title', 'status', 'version', 'priority', 'due_date', 'tags', 'position']);
+            fputcsv($out, [
+                'id',
+                'title',
+                'status',
+                'version',
+                'okr_goal',
+                'okr_objective',
+                'planning_status',
+                'starts_at',
+                'ends_at',
+                'priority',
+                'due_date',
+                'tags',
+                'position',
+            ]);
 
             Task::query()
                 ->where('project_id', $project->id)
-                ->with('version')
+                ->with(['version', 'okrObjective.goal'])
                 ->orderBy('id')
                 ->chunk(200, function ($tasks) use ($out): void {
                     foreach ($tasks as $task) {
@@ -32,6 +47,11 @@ class ProjectExportController extends Controller
                             $task->title,
                             $task->status,
                             $task->version?->name,
+                            $task->okrObjective?->goal?->title,
+                            $task->okrObjective?->title,
+                            $task->planning_status,
+                            $task->starts_at?->format('Y-m-d'),
+                            $task->ends_at?->format('Y-m-d'),
                             $task->priority,
                             $task->due_date?->format('Y-m-d'),
                             is_array($task->tags) ? implode(';', $task->tags) : '',
@@ -89,7 +109,7 @@ class ProjectExportController extends Controller
         }
 
         $body = implode("\n", $lines);
-        $slug = \Illuminate\Support\Str::slug($version->name).'-'.$version->id;
+        $slug = Str::slug($version->name).'-'.$version->id;
 
         return response($body, 200, [
             'Content-Type' => 'text/markdown; charset=UTF-8',

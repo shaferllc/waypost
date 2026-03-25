@@ -56,3 +56,15 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Fleet operator API
+
+Internal JSON endpoints for fleet-wide dashboards (e.g. Fleet Console). Set **`FLEET_OPERATOR_TOKEN`** in `.env` here and on the console. Use **`Authorization: Bearer <token>`** or **`X-Fleet-Operator-Token`**. Unconfigured token → **503**.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/operator/summary` | Snapshot counts / metrics |
+| GET | `/api/operator/readme` | Root `README.md` as JSON (`format`, `content`, `title`) |
+
+Product APIs are defined in `routes/api.php` and `routes/web.php`.
+

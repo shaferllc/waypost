@@ -2,8 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\OkrGoal;
+use App\Models\OkrKeyResult;
+use App\Models\OkrObjective;
 use App\Models\PersonalAccessToken;
 use App\Models\Task;
+use App\Observers\OkrGoalObserver;
+use App\Observers\OkrKeyResultObserver;
+use App\Observers\OkrObjectiveObserver;
 use App\Observers\TaskObserver;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
@@ -26,5 +32,8 @@ class AppServiceProvider extends ServiceProvider
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
 
         Task::observe(TaskObserver::class);
+        OkrGoal::observe(OkrGoalObserver::class);
+        OkrObjective::observe(OkrObjectiveObserver::class);
+        OkrKeyResult::observe(OkrKeyResultObserver::class);
     }
 }

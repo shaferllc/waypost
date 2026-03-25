@@ -56,6 +56,11 @@ class Project extends Model
         return $this->hasMany(RoadmapTheme::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    public function okrGoals(): HasMany
+    {
+        return $this->hasMany(OkrGoal::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class)
@@ -77,6 +82,11 @@ class Project extends Model
     public function wishlistItems(): HasMany
     {
         return $this->hasMany(WishlistItem::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(ProjectActivity::class)->latest('id');
     }
 
     public function scopeAccessible(Builder $query, User $user): void

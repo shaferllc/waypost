@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\OkrGoal;
+use App\Models\OkrKeyResult;
+use App\Models\OkrObjective;
 use App\Models\Project;
 use App\Models\ProjectInvitation;
 use App\Models\ProjectLink;
@@ -114,6 +117,34 @@ class extends Component
 
     public ?int $editTaskThemeId = null;
 
+    public string $editTaskOkrObjectiveId = '';
+
+    public string $editTaskStartsAt = '';
+
+    public string $editTaskEndsAt = '';
+
+    public string $editTaskPlanningStatus = '';
+
+    public string $roadmapPlanView = 'list';
+
+    public string $roadmapFilterTag = '';
+
+    public string $roadmapFilterPlanning = '';
+
+    public string $roadmapSort = 'title';
+
+    public int $roadmapPlanPage = 1;
+
+    public int $roadmapPlanPerPage = 25;
+
+    public string $okrNewGoalTitle = '';
+
+    public string $okrNewObjectiveTitle = '';
+
+    public string $okrNewKrTitle = '';
+
+    public int $okrNewKrProgress = 0;
+
     public ?string $revealedCursorToken = null;
 
     public function mount(Project $project): void
@@ -125,6 +156,32 @@ class extends Component
         if (Gate::allows('update', $project) && ! $issuer->hasTokenForProject(auth()->user(), $project)) {
             $this->revealedCursorToken = $issuer->issue($project, auth()->user());
         }
+    }
+
+    public function updatedRoadmapFilterTag(): void
+    {
+        $this->roadmapPlanPage = 1;
+    }
+
+    public function updatedRoadmapFilterPlanning(): void
+    {
+        $this->roadmapPlanPage = 1;
+    }
+
+    public function updatedRoadmapSort(): void
+    {
+        $this->roadmapPlanPage = 1;
+    }
+
+    public function updatedRoadmapPlanPerPage(): void
+    {
+        $this->roadmapPlanPage = 1;
+    }
+
+    public function gotoRoadmapPlanPage(int $page): void
+    {
+        $last = $this->roadmapPlanTasksLastPage;
+        $this->roadmapPlanPage = max(1, min($last, $page));
     }
 
     #[Computed]
@@ -140,12 +197,20 @@ class extends Component
                 'invitations',
                 'shareTokens',
                 'webhooks',
+                'okrGoals' => fn ($query) => $query->with(['objectives.keyResults']),
                 'tasks' => fn ($query) => $query
-                    ->with(['version', 'theme', 'assignee'])
+                    ->with([
+                        'version',
+                        'theme',
+                        'assignee',
+                        'okrObjective.goal',
+                        'linksAsTarget' => fn ($q) => $q->where('type', TaskLink::TYPE_BLOCKS)->with('source:id,title,project_id'),
+                    ])
                     ->withCount(['attachments', 'comments'])
                     ->withCount([
                         'linksAsTarget as blocking_links_count' => fn ($q) => $q->where('type', TaskLink::TYPE_BLOCKS),
                     ]),
+                'activities' => fn ($query) => $query->with('user')->latest('id')->limit(50),
                 'links',
                 'versions',
                 'wishlistItems',
@@ -185,6 +250,87 @@ class extends Component
     }
 
     #[Computed]
+    public function roadmapPlanTasksFiltered()
+    {
+        $tasks = $this->project->tasks->loadMissing(['okrObjective.goal', 'linksAsTarget.source']);
+        $tagNeedle = mb_strtolower(trim($this->roadmapFilterTag));
+
+        $filtered = $tasks->filter(function (Task $t) use ($tagNeedle) {
+            if ($tagNeedle === '') {
+                return true;
+            }
+            $tags = is_array($t->tags) ? $t->tags : [];
+
+            foreach ($tags as $tag) {
+                if (mb_stripos(mb_strtolower((string) $tag), $tagNeedle) !== false) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        if ($this->roadmapFilterPlanning !== '') {
+            $filtered = $filtered->filter(
+                fn (Task $t) => (string) ($t->planning_status ?? '') === $this->roadmapFilterPlanning
+            );
+        }
+
+        $filtered = $filtered->values();
+
+        return match ($this->roadmapSort) {
+            'timeline' => $filtered->sortBy(function (Task $t) {
+                $s = $t->initiativeStart();
+
+                return $s ? $s->timestamp : PHP_INT_MAX;
+            })->values(),
+            'status' => $filtered->sortBy(function (Task $t) {
+                return [(string) ($t->planning_status ?? 'zzz'), mb_strtolower($t->title)];
+            })->values(),
+            'okr' => $filtered->sortBy(function (Task $t) {
+                $g = $t->okrObjective?->goal?->title ?? 'zzz';
+                $o = $t->okrObjective?->title ?? 'zzz';
+
+                return [mb_strtolower($g), mb_strtolower($o), mb_strtolower($t->title)];
+            })->values(),
+            default => $filtered->sortBy(fn (Task $t) => mb_strtolower($t->title))->values(),
+        };
+    }
+
+    #[Computed]
+    public function roadmapPlanTasksTotal(): int
+    {
+        return (int) $this->roadmapPlanTasksFiltered->count();
+    }
+
+    #[Computed]
+    public function roadmapPlanTasksLastPage(): int
+    {
+        $per = max(5, min(100, (int) $this->roadmapPlanPerPage));
+        $total = $this->roadmapPlanTasksTotal;
+
+        return max(1, (int) ceil($total / $per));
+    }
+
+    #[Computed]
+    public function roadmapPlanTasks()
+    {
+        $all = $this->roadmapPlanTasksFiltered;
+        $page = max(1, $this->roadmapPlanPage);
+        $per = max(5, min(100, (int) $this->roadmapPlanPerPage));
+
+        return $all->forPage($page, $per)->values();
+    }
+
+    #[Computed]
+    public function initiativeTimelineTasks()
+    {
+        return $this->project->tasks->filter(function (Task $t) {
+            return $t->initiativeStart() !== null && $t->initiativeEnd() !== null;
+        })->values();
+    }
+
+    #[Computed]
     public function focusedTask(): ?Task
     {
         if ($this->focusedTaskId === null) {
@@ -197,6 +343,7 @@ class extends Component
                 'version',
                 'theme',
                 'assignee',
+                'okrObjective.goal',
                 'attachments',
                 'comments.user',
                 'linksAsSource.target',
@@ -335,6 +482,10 @@ class extends Component
             $this->editTaskTags = is_array($tags) ? implode(', ', $tags) : '';
             $this->editTaskAssigneeId = $task->assigned_to;
             $this->editTaskThemeId = $task->theme_id;
+            $this->editTaskOkrObjectiveId = $task->okr_objective_id !== null ? (string) $task->okr_objective_id : '';
+            $this->editTaskStartsAt = $task->starts_at?->format('Y-m-d') ?? '';
+            $this->editTaskEndsAt = $task->ends_at?->format('Y-m-d') ?? '';
+            $this->editTaskPlanningStatus = (string) ($task->planning_status ?? '');
         }
         unset($this->focusedTask);
     }
@@ -349,6 +500,10 @@ class extends Component
         $this->editTaskTags = '';
         $this->editTaskAssigneeId = null;
         $this->editTaskThemeId = null;
+        $this->editTaskOkrObjectiveId = '';
+        $this->editTaskStartsAt = '';
+        $this->editTaskEndsAt = '';
+        $this->editTaskPlanningStatus = '';
         unset($this->focusedTask);
     }
 
@@ -363,12 +518,36 @@ class extends Component
 
         $allowed = $this->assigneeUserIds;
 
+        $objectiveIds = OkrObjective::query()
+            ->whereHas('goal', fn ($q) => $q->where('project_id', $this->projectId))
+            ->pluck('id')
+            ->map(intval(...))
+            ->all();
+
         $validated = $this->validate([
             'editTaskPriority' => ['required', 'integer', Rule::in([Task::PRIORITY_LOW, Task::PRIORITY_NORMAL, Task::PRIORITY_HIGH])],
             'editTaskDueDate' => ['nullable', 'date'],
             'editTaskTags' => ['nullable', 'string', 'max:500'],
             'editTaskAssigneeId' => ['nullable', 'integer', Rule::in($allowed)],
             'editTaskThemeId' => ['nullable', 'integer', Rule::exists('roadmap_themes', 'id')->where('project_id', $this->projectId)],
+            'editTaskOkrObjectiveId' => ['nullable', 'string', Rule::in(['', ...array_map(strval(...), $objectiveIds)])],
+            'editTaskStartsAt' => ['nullable', 'date'],
+            'editTaskEndsAt' => [
+                'nullable',
+                'date',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    if ($this->editTaskStartsAt === '') {
+                        return;
+                    }
+                    if (strtotime((string) $value) < strtotime($this->editTaskStartsAt)) {
+                        $fail(__('The end date must be on or after the start date.'));
+                    }
+                },
+            ],
+            'editTaskPlanningStatus' => ['nullable', 'string', Rule::in(Task::PLANNING_STATUSES)],
         ]);
 
         $rawTags = $validated['editTaskTags'] ?? '';
@@ -380,9 +559,15 @@ class extends Component
             'tags' => $tags !== [] ? $tags : null,
             'assigned_to' => $validated['editTaskAssigneeId'],
             'theme_id' => $validated['editTaskThemeId'],
+            'okr_objective_id' => $validated['editTaskOkrObjectiveId'] !== '' && $validated['editTaskOkrObjectiveId'] !== null
+                ? (int) $validated['editTaskOkrObjectiveId']
+                : null,
+            'starts_at' => $validated['editTaskStartsAt'] ?: null,
+            'ends_at' => $validated['editTaskEndsAt'] ?: null,
+            'planning_status' => $validated['editTaskPlanningStatus'] ?: null,
         ]);
 
-        unset($this->focusedTask, $this->project);
+        unset($this->focusedTask, $this->project, $this->roadmapPlanTasksFiltered, $this->initiativeTimelineTasks);
     }
 
     public function addComment(): void
@@ -730,7 +915,7 @@ class extends Component
 
         $validated = $this->validate([
             'inviteEmail' => ['required', 'email', 'max:255'],
-            'inviteRole' => ['required', Rule::in(['editor', 'viewer'])],
+            'inviteRole' => ['required', Rule::in(['admin', 'editor', 'viewer'])],
         ]);
 
         $this->project->invitations()->create([
@@ -910,6 +1095,141 @@ class extends Component
             abort(403);
         }
     }
+
+    private function assertOkrGoalOnProject(OkrGoal $goal): void
+    {
+        if ($goal->project_id !== $this->projectId) {
+            abort(403);
+        }
+    }
+
+    private function assertOkrObjectiveOnProject(OkrObjective $objective): void
+    {
+        $objective->loadMissing('goal');
+        if ($objective->goal->project_id !== $this->projectId) {
+            abort(403);
+        }
+    }
+
+    private function assertOkrKeyResultOnProject(OkrKeyResult $kr): void
+    {
+        $kr->loadMissing('objective.goal');
+        if ($kr->objective->goal->project_id !== $this->projectId) {
+            abort(403);
+        }
+    }
+
+    public function refreshProjectForPoll(): void
+    {
+        unset($this->project, $this->roadmapPlanTasksFiltered, $this->initiativeTimelineTasks, $this->focusedTask);
+    }
+
+    public function addOkrGoal(): void
+    {
+        $this->authorize('update', $this->project);
+
+        $validated = $this->validate([
+            'okrNewGoalTitle' => ['required', 'string', 'max:255'],
+        ]);
+
+        $max = (int) $this->project->okrGoals()->max('sort_order');
+        $this->project->okrGoals()->create([
+            'title' => $validated['okrNewGoalTitle'],
+            'sort_order' => $max + 1,
+        ]);
+
+        $this->reset('okrNewGoalTitle');
+        unset($this->project, $this->roadmapPlanTasksFiltered);
+    }
+
+    public function deleteOkrGoal(OkrGoal $goal): void
+    {
+        $this->assertOkrGoalOnProject($goal);
+        $this->authorize('update', $this->project);
+        $goal->delete();
+        unset($this->project, $this->roadmapPlanTasksFiltered, $this->initiativeTimelineTasks);
+    }
+
+    public function addOkrObjective(int $goalId): void
+    {
+        $this->authorize('update', $this->project);
+
+        $goal = OkrGoal::query()
+            ->where('project_id', $this->projectId)
+            ->whereKey($goalId)
+            ->firstOrFail();
+
+        $validated = $this->validate([
+            'okrNewObjectiveTitle' => ['required', 'string', 'max:255'],
+        ]);
+
+        $max = (int) $goal->objectives()->max('sort_order');
+        $goal->objectives()->create([
+            'title' => $validated['okrNewObjectiveTitle'],
+            'sort_order' => $max + 1,
+        ]);
+
+        $this->reset('okrNewObjectiveTitle');
+        unset($this->project, $this->roadmapPlanTasksFiltered);
+    }
+
+    public function deleteOkrObjective(OkrObjective $objective): void
+    {
+        $this->assertOkrObjectiveOnProject($objective);
+        $this->authorize('update', $this->project);
+        $objective->delete();
+        unset($this->project, $this->roadmapPlanTasksFiltered, $this->initiativeTimelineTasks);
+    }
+
+    public function addOkrKeyResult(int $objectiveId): void
+    {
+        $this->authorize('update', $this->project);
+
+        $objective = OkrObjective::query()
+            ->whereKey($objectiveId)
+            ->whereHas('goal', fn ($q) => $q->where('project_id', $this->projectId))
+            ->firstOrFail();
+
+        $validated = $this->validate([
+            'okrNewKrTitle' => ['required', 'string', 'max:255'],
+            'okrNewKrProgress' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $max = (int) $objective->keyResults()->max('sort_order');
+        $objective->keyResults()->create([
+            'title' => $validated['okrNewKrTitle'],
+            'progress' => $validated['okrNewKrProgress'],
+            'sort_order' => $max + 1,
+        ]);
+
+        $this->reset('okrNewKrTitle');
+        $this->okrNewKrProgress = 0;
+        unset($this->project, $this->roadmapPlanTasksFiltered);
+    }
+
+    public function deleteOkrKeyResult(OkrKeyResult $keyResult): void
+    {
+        $this->assertOkrKeyResultOnProject($keyResult);
+        $this->authorize('update', $this->project);
+        $keyResult->delete();
+        unset($this->project, $this->roadmapPlanTasksFiltered);
+    }
+
+    public function updateOkrKeyResultProgress(int $keyResultId, mixed $progress): void
+    {
+        $keyResult = OkrKeyResult::query()->find($keyResultId);
+        if (! $keyResult) {
+            return;
+        }
+
+        $this->assertOkrKeyResultOnProject($keyResult);
+        $this->authorize('update', $this->project);
+
+        $p = (int) $progress;
+        $p = max(0, min(100, $p));
+        $keyResult->update(['progress' => $p]);
+        unset($this->project, $this->roadmapPlanTasksFiltered);
+    }
 }; ?>
 
 @php
@@ -927,9 +1247,18 @@ class extends Component
         'in_review' => 'Ready for a final look',
         'done' => 'Shipped in the board',
     ];
+    $planningLabels = [
+        \App\Models\Task::PLANNING_ON_TIME => 'On time',
+        \App\Models\Task::PLANNING_IN_PROGRESS => 'In progress',
+        \App\Models\Task::PLANNING_NOT_STARTED => 'Not started',
+        \App\Models\Task::PLANNING_BEHIND => 'Behind',
+        \App\Models\Task::PLANNING_BLOCKED => 'Blocked',
+    ];
 @endphp
 
 <div
+    data-echo-project="{{ $projectId }}"
+    wire:poll.90s="refreshProjectForPoll"
     class="py-10 px-4 sm:px-6 lg:px-8"
     x-data
     x-on:keydown.window.prevent="
@@ -1046,7 +1375,7 @@ class extends Component
 
         <div class="border-b border-cream-300">
             <nav class="-mb-px flex gap-1 overflow-x-auto pb-px" aria-label="Project sections">
-                @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'wishlist' => 'Wishlist', 'links' => 'Links', 'settings' => 'Settings'] as $key => $label)
+                @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'okrs' => 'OKRs', 'wishlist' => 'Wishlist', 'links' => 'Links', 'settings' => 'Settings'] as $key => $label)
                     <button
                         type="button"
                         wire:click="$set('tab', '{{ $key }}')"
@@ -1369,6 +1698,269 @@ class extends Component
                     </label>
                 </div>
 
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-ink">Initiative roadmap</h2>
+                            <p class="mt-1 text-sm text-ink/55">List every card with OKR, planning status, tags, timeline, and dependencies. Set fields on a card’s detail panel. With Reverb running, updates from teammates appear without waiting for a full page refresh.</p>
+                        </div>
+                        <div class="inline-flex rounded-lg border border-cream-300 p-0.5 text-xs font-semibold">
+                            <button
+                                type="button"
+                                wire:click="$set('roadmapPlanView', 'list')"
+                                class="rounded-md px-2 py-1 {{ $this->roadmapPlanView === 'list' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                            >
+                                List
+                            </button>
+                            <button
+                                type="button"
+                                wire:click="$set('roadmapPlanView', 'timeline')"
+                                class="rounded-md px-2 py-1 {{ $this->roadmapPlanView === 'timeline' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                            >
+                                Timeline
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+                        <div class="min-w-[10rem] flex-1">
+                            <label class="block text-xs font-medium text-ink/70">Filter by tag</label>
+                            <input
+                                type="search"
+                                wire:model.live.debounce.300ms="roadmapFilterTag"
+                                placeholder="e.g. API, mobile…"
+                                class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm"
+                            />
+                        </div>
+                        <div class="w-full sm:w-44">
+                            <label class="block text-xs font-medium text-ink/70">Planning status</label>
+                            <select wire:model.live="roadmapFilterPlanning" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                <option value="">All</option>
+                                @foreach (Task::PLANNING_STATUSES as $ps)
+                                    <option value="{{ $ps }}">{{ $planningLabels[$ps] ?? $ps }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="w-full sm:w-44">
+                            <label class="block text-xs font-medium text-ink/70">Sort</label>
+                            <select wire:model.live="roadmapSort" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                <option value="title">Title</option>
+                                <option value="okr">OKR</option>
+                                <option value="status">Planning status</option>
+                                <option value="timeline">Timeline</option>
+                            </select>
+                        </div>
+                        <div class="w-full sm:w-28">
+                            <label class="block text-xs font-medium text-ink/70">Per page</label>
+                            <select wire:model.live="roadmapPlanPerPage" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    @if ($this->project->tasks->isEmpty())
+                        <div class="mt-6 rounded-xl border border-dashed border-cream-300 bg-cream-50/90 p-6 text-sm text-ink/70">
+                            <p class="font-medium text-ink">No cards yet</p>
+                            <p class="mt-1">Create tasks on the <strong>Board</strong> tab first. Then link them to OKRs and dates from each card’s planning section.</p>
+                        </div>
+                    @endif
+
+                    @if ($this->roadmapPlanView === 'list')
+                        <div class="mt-6 overflow-x-auto">
+                            <table class="min-w-full text-left text-sm">
+                                <thead>
+                                    <tr class="border-b border-cream-200 text-xs font-semibold uppercase tracking-wide text-ink/55">
+                                        <th class="py-2 pe-4">Item</th>
+                                        <th class="py-2 pe-4">OKR</th>
+                                        <th class="py-2 pe-4">Status</th>
+                                        <th class="py-2 pe-4">Tags</th>
+                                        <th class="py-2 pe-4">Timeline</th>
+                                        <th class="py-2 pe-4">Dependencies</th>
+                                        <th class="py-2"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-cream-100">
+                                    @forelse ($this->roadmapPlanTasks as $rt)
+                                        <tr wire:key="plan-row-{{ $rt->id }}" @class(['bg-amber-50/40' => $rt->blocking_links_count > 0])>
+                                            <td class="py-3 pe-4 font-medium text-ink">{{ $rt->title }}</td>
+                                            <td class="py-3 pe-4 text-ink/75">
+                                                @if ($rt->okrObjective)
+                                                    <span class="text-xs text-ink/50">{{ $rt->okrObjective->goal->title }}</span>
+                                                    <span class="block">{{ $rt->okrObjective->title }}</span>
+                                                @else
+                                                    <span class="text-ink/40">—</span>
+                                                @endif
+                                            </td>
+                                            <td class="py-3 pe-4">
+                                                @if ($rt->planning_status)
+                                                    <span class="rounded-full bg-cream-100 px-2 py-0.5 text-xs font-medium text-ink">{{ $planningLabels[$rt->planning_status] ?? $rt->planning_status }}</span>
+                                                @else
+                                                    <span class="text-xs text-ink/40">—</span>
+                                                @endif
+                                                @if ($rt->blocking_links_count > 0)
+                                                    <span class="ms-1 text-xs font-semibold text-amber-800">Blocked</span>
+                                                @endif
+                                            </td>
+                                            <td class="py-3 pe-4 text-xs text-ink/70">
+                                                @if (is_array($rt->tags) && count($rt->tags) > 0)
+                                                    {{ implode(', ', $rt->tags) }}
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+                                            <td class="py-3 pe-4 text-xs text-ink/70 whitespace-nowrap">
+                                                @php
+                                                    $rs = $rt->initiativeStart();
+                                                    $re = $rt->initiativeEnd();
+                                                @endphp
+                                                @if ($rs && $re)
+                                                    {{ $rs->format('M j') }} – {{ $re->format('M j, Y') }}
+                                                @elseif ($rs)
+                                                    {{ $rs->format('M j, Y') }}
+                                                @elseif ($re)
+                                                    {{ $re->format('M j, Y') }}
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+                                            <td class="py-3 pe-4 text-xs text-ink/70">
+                                                @if ($rt->linksAsTarget->isNotEmpty())
+                                                    <span class="font-semibold text-amber-900">Blocked by</span>
+                                                    @foreach ($rt->linksAsTarget as $blk)
+                                                        <span class="block">{{ $blk->source->title }}</span>
+                                                    @endforeach
+                                                @else
+                                                    <span class="text-ink/40">—</span>
+                                                @endif
+                                            </td>
+                                            <td class="py-3">
+                                                <button
+                                                    type="button"
+                                                    wire:click="openTaskDetail({{ $rt->id }})"
+                                                    class="text-sm font-semibold text-sage-dark hover:text-sage-deeper"
+                                                >
+                                                    Open
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="py-8 text-center text-sm text-ink/55">
+                                                @if ($this->project->tasks->isEmpty())
+                                                    No tasks yet. Add cards on the Board tab.
+                                                @else
+                                                    No tasks match these filters. Clear the tag or status filter, or try another sort.
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        @if ($this->roadmapPlanTasksLastPage > 1)
+                            <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-ink/70">
+                                <span>Showing {{ $this->roadmapPlanTasks->count() }} of {{ $this->roadmapPlanTasksTotal }} (page {{ $this->roadmapPlanPage }} / {{ $this->roadmapPlanTasksLastPage }})</span>
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        wire:click="gotoRoadmapPlanPage({{ $this->roadmapPlanPage - 1 }})"
+                                        @disabled($this->roadmapPlanPage <= 1)
+                                        class="rounded-lg border border-cream-300 px-3 py-1.5 font-semibold text-ink hover:bg-cream-100 disabled:opacity-40"
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        type="button"
+                                        wire:click="gotoRoadmapPlanPage({{ $this->roadmapPlanPage + 1 }})"
+                                        @disabled($this->roadmapPlanPage >= $this->roadmapPlanTasksLastPage)
+                                        class="rounded-lg border border-cream-300 px-3 py-1.5 font-semibold text-ink hover:bg-cream-100 disabled:opacity-40"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                    @else
+                        @php
+                            $tlTasks = $this->initiativeTimelineTasks;
+                            $rangeStart = null;
+                            $rangeEnd = null;
+                            foreach ($tlTasks as $t) {
+                                $s = $t->initiativeStart();
+                                $e = $t->initiativeEnd();
+                                if ($s && ($rangeStart === null || $s->lt($rangeStart))) {
+                                    $rangeStart = $s->copy()->startOfDay();
+                                }
+                                if ($e && ($rangeEnd === null || $e->gt($rangeEnd))) {
+                                    $rangeEnd = $e->copy()->endOfDay();
+                                }
+                            }
+                            if ($rangeStart && $rangeEnd) {
+                                $timelineStart = $rangeStart->copy()->startOfMonth();
+                                $timelineEnd = $rangeEnd->copy()->endOfMonth();
+                                $totalDays = max(1, $timelineStart->diffInDays($timelineEnd) + 1);
+                                $monthCursor = $timelineStart->copy();
+                                $monthLabels = [];
+                                while ($monthCursor->lte($timelineEnd)) {
+                                    $monthLabels[] = $monthCursor->copy();
+                                    $monthCursor->addMonth()->startOfMonth();
+                                }
+                            } else {
+                                $timelineStart = null;
+                                $totalDays = 1;
+                                $monthLabels = [];
+                            }
+                        @endphp
+                        @if ($timelineStart)
+                            <div class="mt-6 space-y-2">
+                                <div class="flex ps-[11rem] pe-1">
+                                    @foreach ($monthLabels as $m)
+                                        <div class="flex-1 min-w-0 border-l border-cream-200 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-ink/50">
+                                            {{ $m->format('M') }}
+                                        </div>
+                                    @endforeach
+                                </div>
+                                @foreach ($tlTasks as $tt)
+                                    @php
+                                        $ts = $tt->initiativeStart()->startOfDay();
+                                        $te = $tt->initiativeEnd()->endOfDay();
+                                        $leftPct = min(100, max(0, ($timelineStart->diffInDays($ts) / $totalDays) * 100));
+                                        $spanDays = max(1, $ts->diffInDays($te) + 1);
+                                        $widthPct = min(100 - $leftPct, max(0.8, ($spanDays / $totalDays) * 100));
+                                    @endphp
+                                    @php $ttBlocked = $tt->blocking_links_count > 0; @endphp
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <span class="w-44 shrink-0 truncate text-xs font-medium text-ink" title="{{ $tt->title }}">{{ $tt->title }}</span>
+                                        <div class="relative h-7 min-w-0 flex-1 rounded-md {{ $ttBlocked ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-cream-100' }}">
+                                            <div
+                                                class="absolute top-1 bottom-1 rounded-md {{ $ttBlocked ? 'bg-amber-600' : 'bg-sage' }} shadow-sm"
+                                                style="left: {{ $leftPct }}%; width: {{ $widthPct }}%; min-width: 4px;"
+                                            ></div>
+                                        </div>
+                                        @if ($ttBlocked)
+                                            <span class="shrink-0 text-[10px] font-semibold uppercase text-amber-900">Blocked</span>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                            @if ($tlTasks->contains(fn ($t) => $t->blocking_links_count > 0))
+                                <p class="mt-4 text-xs text-ink/55">Amber bars indicate tasks with a <strong>blocked by</strong> dependency. Resolve links on the task detail panel.</p>
+                            @endif
+                        @else
+                            <p class="mt-6 text-sm text-ink/55">
+                                @if ($this->project->tasks->isEmpty())
+                                    Add tasks on the Board tab, then set initiative start/end dates (or a due date) to populate this timeline.
+                                @else
+                                    No schedulable dates yet. Add start/end dates or a due date on tasks—those dates drive this view and spot overlaps.
+                                @endif
+                            </p>
+                        @endif
+                    @endif
+                </section>
+
                 @php
                     $versionsList = $this->hideShippedVersions
                         ? $this->project->versions->whereNull('released_at')
@@ -1378,8 +1970,8 @@ class extends Component
 
                 @if ($ganttVersions->isNotEmpty())
                     <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
-                        <h2 class="text-lg font-semibold text-ink">Timeline</h2>
-                        <p class="mt-1 text-sm text-ink/55">Target dates on a simple strip (not a full Gantt chart).</p>
+                        <h2 class="text-lg font-semibold text-ink">Version target dates</h2>
+                        <p class="mt-1 text-sm text-ink/55">Quick view of release targets (separate from initiative timeline above).</p>
                         <ul class="mt-4 space-y-3">
                             @foreach ($ganttVersions as $gv)
                                 <li class="flex flex-wrap items-center gap-3 text-sm">
@@ -1588,6 +2180,169 @@ class extends Component
             </div>
         @endif
 
+        @if ($this->tab === 'okrs')
+            <div class="space-y-8" wire:key="tab-okrs">
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <h2 class="text-lg font-semibold text-ink">Goals &amp; OKRs</h2>
+                    <p class="mt-1 text-sm text-ink/55">Group objectives under strategic goals, add measurable key results, and link cards from the planning panel on each task.</p>
+                    <div class="mt-4 rounded-lg border border-cream-200 bg-cream-50/90 p-4 text-sm text-ink/75">
+                        <p class="font-medium text-ink">Getting started</p>
+                        <ol class="mt-2 list-decimal space-y-1 ps-5">
+                            <li>Add a <strong>goal</strong> (a strategic theme).</li>
+                            <li>Add <strong>objectives</strong> under it, then <strong>key results</strong> with progress sliders.</li>
+                            <li>Open any board card → save <strong>OKR objective</strong> in planning to tie work to outcomes.</li>
+                        </ol>
+                    </div>
+
+                    @can('update', $this->project)
+                        <form wire:submit="addOkrGoal" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+                            <div class="min-w-0 flex-1">
+                                <label class="block text-xs font-medium text-ink/70">New goal</label>
+                                <input
+                                    wire:model="okrNewGoalTitle"
+                                    type="text"
+                                    class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm"
+                                    placeholder="e.g. Accelerate product-led growth"
+                                />
+                                @error('okrNewGoalTitle')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <button type="submit" class="rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark">
+                                Add goal
+                            </button>
+                        </form>
+                    @endcan
+                </section>
+
+                @forelse ($this->project->okrGoals as $goal)
+                    <section wire:key="okr-goal-{{ $goal->id }}" class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h3 class="text-xl font-semibold text-ink">{{ $goal->title }}</h3>
+                                <p class="mt-1 text-sm text-ink/55">Overall progress (avg. of objectives): <span class="font-semibold text-sage-dark">{{ $goal->averageProgress() }}%</span></p>
+                            </div>
+                            @can('update', $this->project)
+                                <button
+                                    type="button"
+                                    wire:click="deleteOkrGoal({{ $goal->id }})"
+                                    wire:confirm="Delete this goal and all objectives &amp; key results under it?"
+                                    class="text-sm font-semibold text-red-600 hover:text-red-700"
+                                >
+                                    Delete goal
+                                </button>
+                            @endcan
+                        </div>
+
+                        @can('update', $this->project)
+                            <form wire:submit="addOkrObjective({{ $goal->id }})" class="mt-6 flex flex-col gap-2 border-t border-cream-200 pt-6 sm:flex-row sm:items-end">
+                                <div class="min-w-0 flex-1">
+                                    <label class="block text-xs font-medium text-ink/70">New objective under this goal</label>
+                                    <input
+                                        wire:model="okrNewObjectiveTitle"
+                                        type="text"
+                                        class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm"
+                                        placeholder="e.g. Improve activation rate"
+                                    />
+                                    @error('okrNewObjectiveTitle')
+                                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <button type="submit" class="shrink-0 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-cream-50 hover:bg-umber">
+                                    Add objective
+                                </button>
+                            </form>
+                        @endcan
+
+                        <ul class="mt-6 space-y-6">
+                            @foreach ($goal->objectives as $objective)
+                                <li wire:key="okr-obj-{{ $objective->id }}" class="rounded-xl border border-cream-200 bg-cream-50/50 p-4">
+                                    <div class="flex flex-wrap items-start justify-between gap-2">
+                                        <div>
+                                            <h4 class="font-semibold text-ink">{{ $objective->title }}</h4>
+                                            <p class="mt-1 text-xs text-ink/55">Objective progress: <span class="font-semibold text-sage-dark">{{ $objective->averageProgress() }}%</span></p>
+                                        </div>
+                                        @can('update', $this->project)
+                                            <button
+                                                type="button"
+                                                wire:click="deleteOkrObjective({{ $objective->id }})"
+                                                wire:confirm="Delete this objective and its key results? Linked tasks will be unlinked."
+                                                class="text-xs font-semibold text-red-600 hover:underline"
+                                            >
+                                                Remove
+                                            </button>
+                                        @endcan
+                                    </div>
+
+                                    <ul class="mt-4 space-y-3">
+                                        @foreach ($objective->keyResults as $kr)
+                                            <li wire:key="okr-kr-{{ $kr->id }}" class="flex flex-col gap-2 rounded-lg bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                                                <span class="min-w-0 flex-1 text-sm text-ink">{{ $kr->title }}</span>
+                                                <div class="flex flex-wrap items-center gap-3">
+                                                    @can('update', $this->project)
+                                                        <label class="flex items-center gap-2 text-xs text-ink/70" x-data="{ krProgress: {{ (int) $kr->progress }} }">
+                                                            <span class="whitespace-nowrap"><span x-text="krProgress"></span>%</span>
+                                                            <input
+                                                                type="range"
+                                                                min="0"
+                                                                max="100"
+                                                                x-model="krProgress"
+                                                                x-on:change="$wire.updateOkrKeyResultProgress({{ $kr->id }}, krProgress)"
+                                                                class="w-32 accent-sage"
+                                                            />
+                                                        </label>
+                                                        <button
+                                                            type="button"
+                                                            wire:click="deleteOkrKeyResult({{ $kr->id }})"
+                                                            wire:confirm="Remove this key result?"
+                                                            class="text-xs text-red-600 hover:underline"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    @else
+                                                        <span class="text-sm font-semibold text-sage-dark">{{ $kr->progress }}%</span>
+                                                    @endcan
+                                                </div>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+
+                                    @can('update', $this->project)
+                                        <form wire:submit="addOkrKeyResult({{ $objective->id }})" class="mt-4 flex flex-col gap-2 border-t border-cream-200 pt-4 sm:flex-row sm:items-end">
+                                            <div class="min-w-0 flex-1">
+                                                <label class="block text-xs text-ink/70">Key result</label>
+                                                <input
+                                                    wire:model="okrNewKrTitle"
+                                                    type="text"
+                                                    class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm"
+                                                    placeholder="Measurable outcome"
+                                                />
+                                            </div>
+                                            <div class="w-full sm:w-28">
+                                                <label class="block text-xs text-ink/70">Progress</label>
+                                                <input
+                                                    wire:model="okrNewKrProgress"
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm"
+                                                />
+                                            </div>
+                                            <button type="submit" class="rounded-lg bg-sage px-3 py-2 text-sm font-semibold text-white hover:bg-sage-dark">
+                                                Add KR
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @empty
+                    <p class="rounded-xl border border-dashed border-cream-300 bg-cream-100/80 py-12 text-center text-sm text-ink/70">No goals yet. @can('update', $this->project)Add a goal to start your OKR tree.@else Check back when an editor adds goals.@endcan</p>
+                @endforelse
+            </div>
+        @endif
+
         {{-- Wishlist --}}
         @if ($this->tab === 'wishlist')
             <div class="space-y-6" wire:key="tab-wishlist">
@@ -1701,6 +2456,29 @@ class extends Component
                     </div>
                 @endif
 
+                <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                    <h2 class="text-lg font-semibold text-ink">Recent activity</h2>
+                    <p class="mt-1 text-sm text-ink/55">Latest changes to tasks and OKRs in this project (actions performed while signed in).</p>
+                    <ul class="mt-4 max-h-80 space-y-2 overflow-y-auto text-sm">
+                        @forelse ($this->project->activities as $act)
+                            <li wire:key="act-{{ $act->id }}" class="rounded-lg border border-cream-200 bg-cream-50/80 px-3 py-2">
+                                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                                    <span class="font-mono text-xs font-semibold text-sage-dark">{{ $act->action }}</span>
+                                    <span class="text-xs text-ink/50">{{ $act->created_at->diffForHumans() }}</span>
+                                </div>
+                                @if ($act->user)
+                                    <p class="mt-1 text-xs text-ink/60">{{ $act->user->name }}</p>
+                                @endif
+                                @if (is_array($act->properties) && $act->properties !== [])
+                                    <p class="mt-1 text-xs text-ink/70">{{ \Illuminate\Support\Str::limit(json_encode($act->properties, JSON_UNESCAPED_UNICODE), 200) }}</p>
+                                @endif
+                            </li>
+                        @empty
+                            <li class="text-ink/55">No activity recorded yet. Updates will appear here as you edit tasks and OKRs.</li>
+                        @endforelse
+                    </ul>
+                </section>
+
                 @can('manageSettings', $this->project)
                     <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
                         <h2 class="text-lg font-semibold text-ink">People & invites</h2>
@@ -1716,6 +2494,7 @@ class extends Component
                             <div>
                                 <label class="block text-xs font-medium text-ink/70">Role</label>
                                 <select wire:model="inviteRole" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm sm:w-36">
+                                    <option value="admin">Admin</option>
                                     <option value="editor">Editor</option>
                                     <option value="viewer">Viewer</option>
                                 </select>
@@ -1753,7 +2532,7 @@ class extends Component
 
                     <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
                         <h2 class="text-lg font-semibold text-ink">Public roadmap link</h2>
-                        <p class="mt-1 text-sm text-ink/55">Anyone with the link can view versions and task titles (read-only).</p>
+                        <p class="mt-1 text-sm text-ink/55">Anyone with the link can view versions, OKR progress, initiative timelines, and task titles (read-only).</p>
                         <form wire:submit="addShareLink" class="mt-4 flex flex-wrap items-end gap-3">
                             <div class="min-w-0 flex-1">
                                 <label class="block text-xs font-medium text-ink/70">Label <span class="font-normal text-ink/40">(optional)</span></label>
@@ -1937,6 +2716,34 @@ class extends Component
                                         <option value="">— None —</option>
                                         @foreach ($this->project->themes as $th)
                                             <option value="{{ $th->id }}">{{ $th->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs text-ink/70">OKR objective</label>
+                                    <select wire:model="editTaskOkrObjectiveId" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                        <option value="">— None —</option>
+                                        @foreach ($this->project->okrGoals as $og)
+                                            @foreach ($og->objectives as $oo)
+                                                <option value="{{ $oo->id }}">{{ $og->title }} › {{ $oo->title }}</option>
+                                            @endforeach
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-ink/70">Initiative start</label>
+                                    <input wire:model="editTaskStartsAt" type="date" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-ink/70">Initiative end</label>
+                                    <input wire:model="editTaskEndsAt" type="date" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs text-ink/70">Planning status</label>
+                                    <select wire:model="editTaskPlanningStatus" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                        <option value="">— Not set —</option>
+                                        @foreach (Task::PLANNING_STATUSES as $ps)
+                                            <option value="{{ $ps }}">{{ $planningLabels[$ps] ?? $ps }}</option>
                                         @endforeach
                                     </select>
                                 </div>

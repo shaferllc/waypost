@@ -4,7 +4,9 @@ In the app (signed in): open **API docs** in the top nav or go to `/docs/api`.
 
 **Cursor / MCP:** see `mcp/waypost-server/README.md` for a local MCP server that creates tasks and reads the changelog.
 
-Personal API for your account: list projects, add **pinned links (URLs)**, **wishlist ideas**, and **tasks** on a board. All routes require a **Sanctum personal access token** (Bearer).
+Personal API for your account: list projects, add **pinned links (URLs)**, **wishlist ideas**, and **tasks** on a board (including **OKR links**, **initiative dates**, and **planning status**). All routes require a **Sanctum personal access token** (Bearer).
+
+The **browser UI** can refresh in near real time when **Laravel Reverb** is configured (`BROADCAST_CONNECTION=reverb`, `php artisan reverb:start`, and `VITE_REVERB_*` in `.env`). The API itself stays HTTP; Reverb only pushes lightweight `project.{id}` events to open project pages.
 
 **Local dev login** (`composer setup` or `php artisan db:seed`): `test@example.com` / `password` (see `.env.example`).
 
@@ -125,14 +127,25 @@ curl -sS -X POST "https://your-domain.test/api/projects/1/wishlist-items" \
 
 `POST /api/projects/{project}/tasks`
 
-| Field        | Required | Notes |
-|--------------|----------|--------|
-| `title`      | yes      | max 255 |
-| `body`       | no       | max 5000 |
-| `status`     | no       | defaults to `todo`. One of: `backlog`, `todo`, `in_progress`, `done` |
-| `version_id` | no       | must be a roadmap version that belongs to this project (from `GET /api/projects/{project}`) |
+| Field                 | Required | Notes |
+|-----------------------|----------|--------|
+| `title`               | yes      | max 255 |
+| `body`                | no       | max 5000 |
+| `status`              | no       | defaults to `todo`. One of: `backlog`, `todo`, `in_progress`, `in_review`, `done` |
+| `version_id`          | no       | roadmap version id for this project (from `GET /api/projects/{project}`) |
+| `theme_id`            | no       | roadmap theme id for this project |
+| `assigned_to`         | no       | user id (project owner or member) |
+| `priority`            | no       | `1` (low), `2` (normal), `3` (high); default `2` |
+| `due_date`            | no       | `Y-m-d` |
+| `starts_at`           | no       | initiative start `Y-m-d` (roadmap / timeline) |
+| `ends_at`             | no       | initiative end `Y-m-d` (must be on or after `starts_at` when both sent) |
+| `planning_status`     | no       | one of: `on_time`, `in_progress`, `not_started`, `behind`, `blocked` |
+| `okr_objective_id`    | no       | must be an objective whose parent goal belongs to this project |
+| `tags`                | no       | array of strings (max 64 chars each) |
 
 New tasks are appended to the end of the chosen **status** column (same ordering rules as the web UI).
+
+**Response `data`** includes the fields above (with `null` where unset), plus `id`, `project_id`, `position`, and `created_at` (ISO 8601).
 
 Minimal example (lands in **To do**):
 
@@ -159,6 +172,33 @@ curl -sS -X POST "https://your-domain.test/api/projects/1/tasks" \
   }'
 ```
 
+### 5b. Update a task
+
+`PATCH /api/projects/{project}/tasks/{task}`
+
+Send only fields you want to change (all optional except you must send at least one valid field per request). Same validation rules as create for each key.
+
+Example — set planning fields and OKR link:
+
+```bash
+curl -sS -X PATCH "https://your-domain.test/api/projects/1/tasks/12" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "okr_objective_id": 3,
+    "starts_at": "2026-03-01",
+    "ends_at": "2026-04-15",
+    "planning_status": "in_progress"
+  }'
+```
+
+**Response `data`** includes: `id`, `project_id`, `version_id`, `theme_id`, `assigned_to`, `title`, `body`, `status`, `position`, `priority`, `due_date`, `starts_at`, `ends_at`, `planning_status`, `okr_objective_id`, `tags`, `updated_at`.
+
+### 5c. Delete a task
+
+`DELETE /api/projects/{project}/tasks/{task}` — returns `204 No Content`.
+
 ## 6. Activity changelog
 
 `GET /api/changelog`
@@ -182,6 +222,8 @@ Creating a **task**, **wishlist item**, or **project link** via the API appends 
 | `POST` | `/api/projects/{project}/links` | Add pinned URL |
 | `POST` | `/api/projects/{project}/wishlist-items` | Add wishlist idea |
 | `POST` | `/api/projects/{project}/tasks` | Create task |
+| `PATCH` | `/api/projects/{project}/tasks/{task}` | Update task (planning, OKR, board fields, etc.) |
+| `DELETE` | `/api/projects/{project}/tasks/{task}` | Delete task |
 
 ## 8. CORS and browser extensions
 

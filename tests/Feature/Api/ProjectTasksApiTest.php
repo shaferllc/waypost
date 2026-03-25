@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\OkrGoal;
+use App\Models\OkrObjective;
 use App\Models\Project;
 use App\Models\RoadmapVersion;
 use App\Models\Task;
@@ -137,6 +139,46 @@ class ProjectTasksApiTest extends TestCase
             ->assertJsonPath('data.name', 'API')
             ->assertJsonCount(1, 'data.versions')
             ->assertJsonPath('data.versions.0.name', 'MVP');
+    }
+
+    public function test_store_task_accepts_planning_and_okr_fields(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'API',
+        ]);
+        $goal = OkrGoal::query()->create([
+            'project_id' => $project->id,
+            'title' => 'G',
+            'sort_order' => 0,
+        ]);
+        $objective = OkrObjective::query()->create([
+            'okr_goal_id' => $goal->id,
+            'title' => 'O',
+            'sort_order' => 0,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson("/api/projects/{$project->id}/tasks", [
+            'title' => 'Roadmap item',
+            'okr_objective_id' => $objective->id,
+            'starts_at' => '2026-04-01',
+            'ends_at' => '2026-05-01',
+            'planning_status' => Task::PLANNING_IN_PROGRESS,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.title', 'Roadmap item')
+            ->assertJsonPath('data.planning_status', Task::PLANNING_IN_PROGRESS)
+            ->assertJsonPath('data.okr_objective_id', $objective->id);
+
+        $this->assertDatabaseHas('tasks', [
+            'project_id' => $project->id,
+            'title' => 'Roadmap item',
+            'okr_objective_id' => $objective->id,
+            'planning_status' => Task::PLANNING_IN_PROGRESS,
+        ]);
     }
 
     public function test_project_show_forbidden_for_other_user(): void
