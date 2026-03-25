@@ -3,7 +3,7 @@
 use App\Http\Middleware\ApiAcceptsJson;
 use App\Http\Middleware\EnforceProjectScopedSanctumToken;
 use App\Http\Middleware\EnsureTwoFactorChallengeSession;
-use App\Http\Middleware\ValidateFleetOperatorToken;
+use Dply\FleetOperator\Http\Middleware\AuthenticateFleetOperator;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -25,7 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'token.project' => EnforceProjectScopedSanctumToken::class,
-            'fleet.operator' => ValidateFleetOperatorToken::class,
+            'fleet.operator' => AuthenticateFleetOperator::class,
             'two_factor.challenge' => EnsureTwoFactorChallengeSession::class,
         ]);
     })

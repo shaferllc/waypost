@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b46151c9a2c94cc32f9c1376dbc863d1",
+    "content-hash": "08e6eb6d9df92e41131c454e5154ed81",
     "packages": [
         {
             "name": "brick/math",
@@ -749,6 +749,67 @@
                 }
             ],
             "time": "2024-02-05T11:56:58+00:00"
+        },
+        {
+            "name": "dply/fleet-operator",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/shaferllc/fleet-operator.git",
+                "reference": "e8550ba84e6c6bc3bb0f86fe3cda8715de53f9f2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/shaferllc/fleet-operator/zipball/e8550ba84e6c6bc3bb0f86fe3cda8715de53f9f2",
+                "reference": "e8550ba84e6c6bc3bb0f86fe3cda8715de53f9f2",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^11.0|^12.0|^13.0",
+                "illuminate/http": "^11.0|^12.0|^13.0",
+                "illuminate/support": "^11.0|^12.0|^13.0",
+                "php": "^8.4"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^9.0|^10.0|^11.0",
+                "phpunit/phpunit": "^11.5.50|^12.5.8"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Dply\\FleetOperator\\FleetOperatorServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Dply\\FleetOperator\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fleet Console contributors"
+                }
+            ],
+            "description": "Laravel middleware, config, and OpenAPI spec for Fleet Console operator APIs (GET …/summary and …/readme).",
+            "keywords": [
+                "fleet",
+                "laravel",
+                "monitoring",
+                "openapi",
+                "operator"
+            ],
+            "support": {
+                "issues": "https://github.com/shaferllc/fleet-operator/issues",
+                "source": "https://github.com/shaferllc/fleet-operator/tree/main"
+            },
+            "time": "2026-03-25T15:24:07+00:00"
         },
         {
             "name": "dragonmantank/cron-expression",
@@ -11567,7 +11628,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "dply/fleet-operator": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
