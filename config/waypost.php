@@ -1,20 +1,5 @@
 <?php
 
-$mcpNpmDefault = '@waypost/mcp-server@1.0.0';
-$mcpPkgPath = dirname(__DIR__).'/mcp/waypost-server/package.json';
-if (is_readable($mcpPkgPath)) {
-    $decoded = json_decode((string) file_get_contents($mcpPkgPath), true);
-    if (is_array($decoded)
-        && isset($decoded['name'], $decoded['version'])
-        && is_string($decoded['name'])
-        && is_string($decoded['version'])
-        && $decoded['name'] !== ''
-        && $decoded['version'] !== ''
-    ) {
-        $mcpNpmDefault = $decoded['name'].'@'.$decoded['version'];
-    }
-}
-
 return [
 
     /*
@@ -49,20 +34,18 @@ return [
     | MCP server — npm package for editors (npx)
     |--------------------------------------------------------------------------
     |
-    | End-user MCP config uses: npx -y <this value>
-    | No local copy of mcp/waypost-server is required once this package is
-    | published to npm (npm publish in mcp/waypost-server, scope may need
-    | --access public). You are not hosting a separate MCP HTTP service.
+    | When set (e.g. @shaferllc/mcp-server@1.0.0), end-user MCP config uses
+    | npx -y <value> — no local copy of mcp/waypost-server. Publish the package
+    | to npm first or editors will see npm 404.
     |
-    | Default spec is built from mcp/waypost-server/package.json (name@version)
-    | so deploys stay aligned when you bump that file. Override with this env
-    | if you must pin a different published build.
+    | Default is empty: local workspace mode (npx tsx + cwd under
+    | mcp/waypost-server). Users copy that folder, run npm install, open repo root.
     |
-    | Set to empty string to generate config that runs from a git checkout
-    | (cwd + tsx src/index.ts under mcp/waypost-server).
+    | After publishing, set this on production to match package.json, e.g.
+    | WAYPOST_MCP_NPM_PACKAGE=@shaferllc/mcp-server@1.0.0
     |
     */
 
-    'mcp_npm_package' => env('WAYPOST_MCP_NPM_PACKAGE', $mcpNpmDefault),
+    'mcp_npm_package' => env('WAYPOST_MCP_NPM_PACKAGE', ''),
 
 ];

@@ -6,7 +6,7 @@ The server always talks to Waypost over **HTTP** (`WAYPOST_BASE_URL` + `/api/...
 
 ## Setup
 
-1. **Easiest:** open a project in Waypost → **Sync** tab. Download the setup ZIP (`waypost.json`, **`.cursor/rules/…`**, README) into your **repo root**. Use **Install in … (MCP)** or **Copy MCP config** — with **`@waypost/mcp-server` published to npm**, the config is **`npx -y @waypost/mcp-server@…`** (no local copy of this folder, no Waypost-hosted MCP process — the server still talks to your existing Waypost **HTTPS API**). A **project API token** is created when you open Sync (copy once); paste into `waypost.json` as `api_token` **locally** (never commit) or set **`WAYPOST_API_TOKEN`** in MCP env. If your Waypost instance sets **`WAYPOST_MCP_NPM_PACKAGE=`** (empty), copy **`mcp/waypost-server`** into the repo, run **`npm install`**, and open the repo root so **`cwd`** + **`tsx`** paths work.
+1. **Easiest:** open a project in Waypost → **Sync** tab. Download the setup ZIP (`waypost.json`, **`.cursor/rules/…`**, README) into your **repo root**. Use **Install in … (MCP)** or **Copy MCP config** — with **`@shaferllc/mcp-server` published to npm**, the config is **`npx -y @shaferllc/mcp-server@…`** (no local copy of this folder, no Waypost-hosted MCP process — the server still talks to your existing Waypost **HTTPS API**). A **project API token** is created when you open Sync (copy once); paste into `waypost.json` as `api_token` **locally** (never commit) or set **`WAYPOST_API_TOKEN`** in MCP env. If your Waypost instance sets **`WAYPOST_MCP_NPM_PACKAGE=`** (empty), copy **`mcp/waypost-server`** into the repo, run **`npm install`**, and open the repo root so **`cwd`** + **`tsx`** paths work.
 2. **Alternatively:** **Profile → API tokens** for a token that works on every project you own.
 3. From this directory:
 
@@ -17,7 +17,7 @@ The server always talks to Waypost over **HTTP** (`WAYPOST_BASE_URL` + `/api/...
    Optional (only if you want `dist/` and `npm start`): `npm run build`
 
 4. **Publish to npm** (maintainers): bump **`version`** in this `package.json`, commit, then either:
-   - **CI:** tag `mcp-server-vX.Y.Z` (must match `version`) and push — GitHub Actions **Publish @waypost/mcp-server** runs `npm publish --access public` (set repo secret **`NPM_TOKEN`**), or  
+   - **CI:** tag `mcp-server-vX.Y.Z` (must match `version`) and push — GitHub Actions **Publish @shaferllc/mcp-server** runs `npm publish --access public` (set repo secret **`NPM_TOKEN`**), or  
    - **Manual:** `npm run build` && `npm publish --access public` from this directory.  
    The Laravel app defaults **`WAYPOST_MCP_NPM_PACKAGE`** from this file on deploy (no duplicate version in `.env` unless you override).
 
@@ -32,7 +32,7 @@ Example:
   "mcpServers": {
     "waypost": {
       "command": "npx",
-      "args": ["-y", "@waypost/mcp-server@1.0.0"],
+      "args": ["-y", "@shaferllc/mcp-server@1.0.0"],
       "env": {
         "WAYPOST_BASE_URL": "http://127.0.0.1:8000",
         "WAYPOST_API_TOKEN": "paste-your-token-here"

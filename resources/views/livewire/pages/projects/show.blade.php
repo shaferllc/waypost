@@ -1443,12 +1443,11 @@ class extends Component
                 <div class="rounded-xl border border-sage-light/50 bg-sage-light/10 p-4 sm:p-5" wire:key="tab-sync">
                     <h2 class="text-sm font-semibold text-ink">Sync with your editor</h2>
                     <p class="mt-1 text-sm text-ink/70 max-w-3xl">
-                        <strong>MCP:</strong> install links use <code class="rounded bg-cream-200 px-1 text-xs">npx -y</code> to run the published npm package
-                        <code class="rounded bg-cream-200 px-1 text-xs">@waypost/mcp-server</code> — no copy of <code class="rounded bg-cream-200 px-1 text-xs">mcp/waypost-server</code> into your repo and no separate hosted MCP service (only the normal Waypost web API).
-                        Download the bundle for <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code>, <code class="rounded bg-cream-200 px-1 text-xs">.cursor/rules</code>, and the README. Use your <strong>project API token</strong> in
+                        <strong>MCP:</strong> by default this app uses <strong>local mode</strong>: copy <code class="rounded bg-cream-200 px-1 text-xs">mcp/waypost-server</code> into your repo root, run <code class="rounded bg-cream-200 px-1 text-xs">npm install</code> there, open the repo in your editor — install links use <code class="rounded bg-cream-200 px-1 text-xs">npx tsx</code> with <code class="rounded bg-cream-200 px-1 text-xs">cwd</code> set to that folder (no <code class="rounded bg-cream-200 px-1 text-xs">npm run build</code>).
+                        After the package is <strong>published to npm</strong>, the server operator sets <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_MCP_NPM_PACKAGE=@shaferllc/mcp-server@…</code> on the Waypost host; then install links use <code class="rounded bg-cream-200 px-1 text-xs">npx -y …</code> instead (no local copy). Until then, <code class="rounded bg-cream-200 px-1 text-xs">npx -y @shaferllc/mcp-server</code> will 404 from npm.
+                        Download the bundle for <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code>, <code class="rounded bg-cream-200 px-1 text-xs">.cursor/rules</code>, and the README. Put your <strong>project API token</strong> in
                         <code class="rounded bg-cream-200 px-1 text-xs">waypost.json</code> as <code class="rounded bg-cream-200 px-1 text-xs">api_token</code> or in MCP env as
                         <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code> — never commit secrets.
-                        If your app uses <strong>local MCP mode</strong> (empty <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_MCP_NPM_PACKAGE</code>), copy <code class="rounded bg-cream-200 px-1 text-xs">mcp/waypost-server</code> into your repo and run <code class="rounded bg-cream-200 px-1 text-xs">npm install</code> there.
                     </p>
 
                     <div class="mt-4 flex flex-col gap-2 sm:max-w-md">

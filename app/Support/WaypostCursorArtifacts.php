@@ -7,7 +7,7 @@ use App\Models\Project;
 final class WaypostCursorArtifacts
 {
     /**
-     * Directory containing package.json for @waypost/mcp-server, relative to the opened workspace root.
+     * Directory containing package.json for @shaferllc/mcp-server, relative to the opened workspace root.
      */
     public const MCP_SERVER_PACKAGE_DIR = 'mcp/waypost-server';
 
@@ -30,7 +30,7 @@ final class WaypostCursorArtifacts
             'WAYPOST_API_TOKEN' => 'PASTE_YOUR_PROJECT_TOKEN',
         ];
 
-        $spec = trim((string) config('waypost.mcp_npm_package', '@waypost/mcp-server@1.0.0'));
+        $spec = trim((string) config('waypost.mcp_npm_package', '@shaferllc/mcp-server@1.0.0'));
         if ($spec === '') {
             return [
                 'command' => 'npx',
@@ -138,7 +138,7 @@ Waypost + Cursor — quick setup
    - .cursor/rules/waypost-agent-activity.mdc
    - this file (WAYPOST-CURSOR-README.txt)
 
-2. MCP install from the Sync tab uses npx to run the published npm package @waypost/mcp-server
+2. MCP install from the Sync tab uses npx to run the published npm package @shaferllc/mcp-server
    (no copy of mcp/waypost-server into this repo required). If your Waypost admin uses local mode
    instead, copy mcp/waypost-server here and run npm install inside it.
 
@@ -150,7 +150,7 @@ Waypost + Cursor — quick setup
    - into your editor MCP env as WAYPOST_API_TOKEN (recommended).
 
 5. Use the project Sync tab → Install in editor (MCP) or Copy MCP config. With the npm package,
-   command is npx -y @waypost/mcp-server@… (no cwd). Local-mode installs use cwd under
+   command is npx -y @shaferllc/mcp-server@… (no cwd). Local-mode installs use cwd under
    mcp/waypost-server instead.
 
 6. Reload MCP / restart the editor if needed.

@@ -1,4 +1,4 @@
-# Publish @waypost/mcp-server to npm.
+# Publish @shaferllc/mcp-server to npm.
 #
 # Setup (once):
 #   1. npmjs.com → Access Tokens → Granular (or classic) token with publish.
@@ -10,9 +10,9 @@
 #   3. Tag: git tag mcp-server-v$(node -p "require('./mcp/waypost-server/package.json').version") && git push origin mcp-server-v…
 #   4. This workflow runs on that tag and checks tag ↔ package.json match, then npm publish.
 #
-# Or: Actions → "Publish @waypost/mcp-server" → Run workflow (publishes current package.json on the branch).
+# Or: Actions → "Publish @shaferllc/mcp-server" → Run workflow (publishes current package.json on the branch).
 
-name: Publish @waypost/mcp-server
+name: Publish @shaferllc/mcp-server
 
 on:
   workflow_dispatch:
