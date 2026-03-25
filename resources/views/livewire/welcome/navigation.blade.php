@@ -1,4 +1,4 @@
-<nav class="-mx-3 flex flex-1 justify-end gap-1">
+<nav class="flex items-center justify-end gap-1 sm:gap-2">
     @auth
         <a
             href="{{ url('/dashboard') }}"

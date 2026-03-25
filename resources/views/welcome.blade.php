@@ -10,19 +10,15 @@
     </head>
     <body class="antialiased font-sans text-ink bg-gradient-to-b from-cream-100 via-cream-50 to-gold-pale/25 min-h-screen">
         <div class="relative min-h-screen flex flex-col">
-            <header class="border-b border-cream-300/80 bg-cream-50/90 backdrop-blur-sm">
-                <div class="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
-                    <a href="/" wire:navigate class="flex items-center gap-3 min-w-0">
-                        <x-application-logo class="h-10 w-auto sm:h-11 shrink-0" />
-                        <span class="text-xl font-bold tracking-tight text-ink truncate">{{ config('app.name') }}</span>
-                    </a>
+            <x-site-header>
+                <x-slot name="actions">
                     @if (Route::has('login'))
                         <livewire:welcome.navigation />
                     @endif
-                </div>
-            </header>
+                </x-slot>
+            </x-site-header>
 
-            <main class="flex-1 flex items-center px-6 py-16">
+            <main class="flex-1 flex items-center px-4 sm:px-6 lg:px-8 py-16">
                 <div class="max-w-2xl mx-auto text-center">
                     <p class="text-sm font-semibold uppercase tracking-widest text-sage-dark">Free & simple</p>
                     <h1 class="mt-4 text-4xl sm:text-5xl font-bold tracking-tight text-ink">
@@ -76,9 +72,7 @@
                 </div>
             </main>
 
-            <footer class="py-8 text-center text-xs text-ink/55">
-                Built with Laravel {{ Illuminate\Foundation\Application::VERSION }}
-            </footer>
+            <x-site-footer variant="marketing" class="mt-auto" />
         </div>
     </body>
 </html>
