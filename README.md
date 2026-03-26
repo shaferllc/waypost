@@ -70,7 +70,12 @@ Product APIs are defined in `routes/api.php` and `routes/web.php`.
 
 ## Fleet Auth (central login)
 
-Sign-in can use **Fleet Auth** ([shaferllc/fleet-auth](https://github.com/shaferllc/fleet-auth)) via the Composer package **[fleet/idp-client](https://github.com/shaferllc/fleet-idp-client)**:
+Sign-in can use **Fleet Auth** ([shaferllc/fleet-auth](https://github.com/shaferllc/fleet-auth)) via the Composer package **`fleet/idp-client`**:
+
+- **Registry:** [packages.shafer.llc/packages/fleet/idp-client](https://packages.shafer.llc/packages/fleet/idp-client) (configure `http-basic.packages.shafer.llc` for `composer install`).
+- **Docs (views, routes, controllers):** see the package README “Views and UI” on [GitHub](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md).
+
+This repo’s `composer.json` already includes the `https://packages.shafer.llc` repository (with `canonical: false`) and an optional `../fleet-idp-client` path for local development.
 
 - **Continue with Fleet** — OAuth2 authorization code; callback at `/oauth/fleet-auth/callback`.
 - **Email / password** — Passport password grant against the same IdP; the local `User` record is synced from `GET /api/user`.

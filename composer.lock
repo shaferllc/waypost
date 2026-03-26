@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "dd63ed027925fe894c2943c493a4b9dc",
+    "content-hash": "ba30275abeb398eabab3a782426f470e",
     "packages": [
         {
             "name": "brick/math",
@@ -1054,11 +1054,11 @@
         },
         {
             "name": "fleet/idp-client",
-            "version": "dev-main",
+            "version": "0.1.0",
             "dist": {
                 "type": "path",
                 "url": "../fleet-idp-client",
-                "reference": "ae52e89a9a384cea22617348b2524283030c00d3"
+                "reference": "7479b9abb954bfb59d8afe80997ace307ad7c20d"
             },
             "require": {
                 "illuminate/contracts": "^12.0|^13.0",
@@ -11667,8 +11667,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "dply/fleet-operator": 20,
-        "fleet/idp-client": 20
+        "dply/fleet-operator": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
