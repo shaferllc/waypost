@@ -1,9 +1,6 @@
 @if ($anyEnabled)
 <div {{ $attributes->class(['space-y-3']) }}>
-    <x-fleet-idp::oauth-button
-        :href="route('oauth.fleet-auth.redirect')"
-        variant="waypost"
-    />
+    <x-fleet-idp::oauth-button variant="waypost" />
 
     @if ($githubEnabled)
         <a

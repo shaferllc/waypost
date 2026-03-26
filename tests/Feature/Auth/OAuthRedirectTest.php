@@ -45,7 +45,7 @@ class OAuthRedirectTest extends TestCase
             'fleet_idp.client_secret' => '',
         ]);
 
-        $this->get(route('oauth.fleet-auth.redirect'))
+        $this->get(route('fleet-idp.oauth.redirect'))
             ->assertNotFound();
     }
 }

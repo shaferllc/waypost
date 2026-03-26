@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Auth\FleetAuthController;
 use App\Http\Controllers\Auth\OAuthController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
@@ -26,12 +25,6 @@ Route::middleware('guest')->group(function () {
     Route::get('oauth/{provider}/callback', [OAuthController::class, 'callback'])
         ->whereIn('provider', ['github', 'google'])
         ->name('oauth.callback');
-
-    Route::get('oauth/fleet-auth', [FleetAuthController::class, 'redirect'])
-        ->name('oauth.fleet-auth.redirect');
-
-    Route::get('oauth/fleet-auth/callback', [FleetAuthController::class, 'callback'])
-        ->name('oauth.fleet-auth.callback');
 });
 
 Route::middleware(['guest', 'two_factor.challenge'])->group(function (): void {
