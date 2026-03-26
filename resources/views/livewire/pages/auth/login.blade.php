@@ -2,6 +2,7 @@
 
 use App\Livewire\Forms\LoginForm;
 use Fleet\IdpClient\FleetEmailSignIn;
+use Fleet\IdpClient\FleetIdpEmailLogin;
 use Fleet\IdpClient\FleetIdpOAuth;
 use Fleet\IdpClient\FleetIdpPasswordGrant;
 use Fleet\IdpClient\Services\FleetSocialLoginPolicy;
@@ -95,7 +96,14 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     @php
-        $showPasswordlessLogin = Route::has('login.email-code') && FleetEmailSignIn::guestFlowAvailable();
+        // guestFlowAvailable() is always true in the package (local + Fleet paths).
+        // Without Fleet password grant, hide this card unless explicitly enabled for satellite-only passwordless.
+        $showPasswordlessLogin = Route::has('login.email-code')
+            && FleetEmailSignIn::guestFlowAvailable()
+            && (
+                FleetIdpEmailLogin::isAvailable()
+                || filter_var(config('waypost.email_sign_in_login_card_without_fleet'), FILTER_VALIDATE_BOOL)
+            );
     @endphp
 
     <div class="mb-6">

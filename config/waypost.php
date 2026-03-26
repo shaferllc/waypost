@@ -104,4 +104,21 @@ return [
         ? null
         : filter_var($v, FILTER_VALIDATE_BOOL),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Login page — passwordless email (code / magic link)
+    |--------------------------------------------------------------------------
+    |
+    | The package can send codes/links without Fleet (local challenges). By default
+    | the login card is hidden when Fleet password grant is not configured, so a
+    | Fleet-disconnected install only shows password (and optional OAuth). Set true
+    | to advertise /login/email-code for satellite-only passwordless users.
+    |
+    */
+
+    'email_sign_in_login_card_without_fleet' => filter_var(
+        env('WAYPOST_EMAIL_SIGN_IN_LOGIN_CARD_WITHOUT_FLEET', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
 ];

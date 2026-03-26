@@ -18,6 +18,16 @@ class AuthenticationTest extends TestCase
         $response
             ->assertOk()
             ->assertSeeLivewire('pages.auth.login')
+            ->assertDontSee('Sign in without your password')
+            ->assertDontSee('Continue with email code or link');
+    }
+
+    public function test_login_screen_shows_passwordless_card_when_enabled_without_fleet(): void
+    {
+        config(['waypost.email_sign_in_login_card_without_fleet' => true]);
+
+        $this->get('/login')
+            ->assertOk()
             ->assertSee('Sign in without your password')
             ->assertSee('Continue with email code or link');
     }
