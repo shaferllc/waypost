@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "08e6eb6d9df92e41131c454e5154ed81",
+    "content-hash": "dd63ed027925fe894c2943c493a4b9dc",
     "packages": [
         {
             "name": "brick/math",
@@ -1051,6 +1051,44 @@
                 "source": "https://github.com/firebase/php-jwt/tree/v7.0.3"
             },
             "time": "2026-02-25T22:16:40+00:00"
+        },
+        {
+            "name": "fleet/idp-client",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "../fleet-idp-client",
+                "reference": "ae52e89a9a384cea22617348b2524283030c00d3"
+            },
+            "require": {
+                "illuminate/contracts": "^12.0|^13.0",
+                "illuminate/database": "^12.0|^13.0",
+                "illuminate/http": "^12.0|^13.0",
+                "illuminate/session": "^12.0|^13.0",
+                "illuminate/support": "^12.0|^13.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Fleet\\IdpClient\\FleetIdpServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Fleet\\IdpClient\\": "src/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Laravel client for Fleet central auth: Passport OAuth, optional password grant, Eloquent user sync.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "fruitcake/php-cors",
@@ -11629,7 +11667,8 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "dply/fleet-operator": 20
+        "dply/fleet-operator": 20,
+        "fleet/idp-client": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

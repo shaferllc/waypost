@@ -36,4 +36,16 @@ class OAuthRedirectTest extends TestCase
         $this->get('/oauth/twitter')
             ->assertNotFound();
     }
+
+    public function test_fleet_auth_redirect_returns_not_found_when_not_configured(): void
+    {
+        config([
+            'fleet_idp.url' => '',
+            'fleet_idp.client_id' => '',
+            'fleet_idp.client_secret' => '',
+        ]);
+
+        $this->get(route('oauth.fleet-auth.redirect'))
+            ->assertNotFound();
+    }
 }

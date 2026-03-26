@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use Fleet\IdpClient\FleetIdpOAuth;
+use Fleet\IdpClient\FleetIdpPasswordGrant;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
@@ -20,6 +22,40 @@ new #[Layout('layouts.guest')] class extends Component
         $this->validate();
 
         $this->form->ensureIsNotRateLimited();
+
+        $email = (string) $this->form->email;
+        $password = (string) $this->form->password;
+
+        if (FleetIdpPasswordGrant::isConfigured()) {
+            $user = FleetIdpPasswordGrant::attempt($email, $password);
+            if ($user === null) {
+                RateLimiter::hit($this->form->throttleKey());
+
+                throw ValidationException::withMessages([
+                    'form.email' => trans('auth.failed'),
+                ]);
+            }
+
+            if ($user->hasTwoFactorEnabled()) {
+                Session::put([
+                    'two_factor.id' => $user->id,
+                    'two_factor.remember' => $this->form->remember,
+                ]);
+                Session::regenerateToken();
+                RateLimiter::clear($this->form->throttleKey());
+
+                $this->redirect(route('two-factor.challenge', absolute: false), navigate: false);
+
+                return;
+            }
+
+            Auth::login($user, $this->form->remember);
+            RateLimiter::clear($this->form->throttleKey());
+            Session::regenerate();
+            $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+
+            return;
+        }
 
         if (! Auth::attempt($this->form->only(['email', 'password']), $this->form->remember)) {
             RateLimiter::hit($this->form->throttleKey());
@@ -59,6 +95,15 @@ new #[Layout('layouts.guest')] class extends Component
     <div class="mb-6">
         <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Log in') }}</h1>
         <p class="mt-1 text-sm text-ink/70">{{ __('Welcome back to :app.', ['app' => config('app.name')]) }}</p>
+        @if (FleetIdpPasswordGrant::isConfigured())
+            <p class="mt-3 text-xs leading-relaxed text-ink/55">
+                {{ __('Your Waypost profile is synced from Fleet. Sign in with the same email and password you use there (or use Fleet sign-in).') }}
+            </p>
+        @elseif (FleetIdpOAuth::isConfigured())
+            <p class="mt-3 text-xs leading-relaxed text-ink/55">
+                {{ __('Use Fleet sign-in to create your session from the central auth site. Email login below uses your local Waypost password unless password sync is configured.') }}
+            </p>
+        @endif
     </div>
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
@@ -77,7 +122,7 @@ new #[Layout('layouts.guest')] class extends Component
                 <div class="w-full border-t border-cream-300"></div>
             </div>
             <div class="relative flex justify-center text-xs uppercase tracking-wide">
-                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or with email') }}</span>
+                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or sign in with email') }}</span>
             </div>
         </div>
     @endif
@@ -125,5 +170,10 @@ new #[Layout('layouts.guest')] class extends Component
             {{ __('No account yet?') }}
             <a href="{{ route('register') }}" wire:navigate class="font-semibold text-sage-dark hover:text-sage-deeper">{{ __('Create one') }}</a>
         </p>
+        @if (FleetIdpOAuth::isConfigured() || FleetIdpPasswordGrant::isConfigured())
+            <p class="mt-2 text-center text-xs text-ink/50">
+                {{ __('New users: register in Fleet first, then sign in here.') }}
+            </p>
+        @endif
     @endif
 </div>
