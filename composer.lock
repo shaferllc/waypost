@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "aca334f7f274a623d873f0e45924c217",
+    "content-hash": "00397ae53af4d61901b4e96b8d8108c1",
     "packages": [
         {
             "name": "brick/math",
@@ -752,16 +752,16 @@
         },
         {
             "name": "dply/fleet-operator",
-            "version": "dev-main",
+            "version": "v1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/shaferllc/fleet-operator.git",
-                "reference": "e8550ba84e6c6bc3bb0f86fe3cda8715de53f9f2"
+                "reference": "bd053c839d1070cc637c2a964704d2cd54710716"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/shaferllc/fleet-operator/zipball/e8550ba84e6c6bc3bb0f86fe3cda8715de53f9f2",
-                "reference": "e8550ba84e6c6bc3bb0f86fe3cda8715de53f9f2",
+                "url": "https://api.github.com/repos/shaferllc/fleet-operator/zipball/bd053c839d1070cc637c2a964704d2cd54710716",
+                "reference": "bd053c839d1070cc637c2a964704d2cd54710716",
                 "shasum": ""
             },
             "require": {
@@ -770,11 +770,13 @@
                 "illuminate/support": "^11.0|^12.0|^13.0",
                 "php": "^8.4"
             },
+            "replace": {
+                "fleetphp/fleet-operator": "*"
+            },
             "require-dev": {
                 "orchestra/testbench": "^9.0|^10.0|^11.0",
                 "phpunit/phpunit": "^11.5.50|^12.5.8"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -797,19 +799,22 @@
                     "name": "Fleet Console contributors"
                 }
             ],
-            "description": "Laravel middleware, config, and OpenAPI spec for Fleet Console operator APIs (GET …/summary and …/readme).",
+            "description": "PHP middleware, config, and OpenAPI spec for Fleet Console operator APIs (GET …/summary and …/readme).",
+            "homepage": "https://github.com/shaferllc/fleet-operator",
             "keywords": [
                 "fleet",
-                "laravel",
+                "http",
+                "middleware",
                 "monitoring",
                 "openapi",
-                "operator"
+                "operator",
+                "php"
             ],
             "support": {
                 "issues": "https://github.com/shaferllc/fleet-operator/issues",
-                "source": "https://github.com/shaferllc/fleet-operator/tree/main"
+                "source": "https://github.com/shaferllc/fleet-operator"
             },
-            "time": "2026-03-25T15:24:07+00:00"
+            "time": "2026-03-25T17:31:23+00:00"
         },
         {
             "name": "dragonmantank/cron-expression",
@@ -2173,16 +2178,16 @@
         },
         {
             "name": "laravel/reverb",
-            "version": "v1.8.1",
+            "version": "v1.9.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/reverb.git",
-                "reference": "70e3d28ed31466da34de0c055f3681b75a5a538c"
+                "reference": "7a1ef2235cfe085cdf3190d0dcfaed4f7d251734"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/reverb/zipball/70e3d28ed31466da34de0c055f3681b75a5a538c",
-                "reference": "70e3d28ed31466da34de0c055f3681b75a5a538c",
+                "url": "https://api.github.com/repos/laravel/reverb/zipball/7a1ef2235cfe085cdf3190d0dcfaed4f7d251734",
+                "reference": "7a1ef2235cfe085cdf3190d0dcfaed4f7d251734",
                 "shasum": ""
             },
             "require": {
@@ -2246,9 +2251,9 @@
             ],
             "support": {
                 "issues": "https://github.com/laravel/reverb/issues",
-                "source": "https://github.com/laravel/reverb/tree/v1.8.1"
+                "source": "https://github.com/laravel/reverb/tree/v1.9.0"
             },
-            "time": "2026-03-14T16:59:35+00:00"
+            "time": "2026-03-20T20:16:59+00:00"
         },
         {
             "name": "laravel/sanctum",
@@ -5597,11 +5602,17 @@
         },
         {
             "name": "shaferllc/fleet-idp-client",
-            "version": "0.9.21",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:shaferllc/fleet-idp-client.git",
+                "reference": "6fe403ee51e016b720bddc11f7eb56608a6ad301"
+            },
             "dist": {
-                "type": "path",
-                "url": "../fleet-idp-client",
-                "reference": "f306e57955f82b19760ed393e37a588c684f5770"
+                "type": "zip",
+                "url": "https://api.github.com/repos/shaferllc/fleet-idp-client/zipball/6fe403ee51e016b720bddc11f7eb56608a6ad301",
+                "reference": "6fe403ee51e016b720bddc11f7eb56608a6ad301",
+                "shasum": ""
             },
             "require": {
                 "illuminate/auth": "^12.0|^13.0",
@@ -5616,6 +5627,7 @@
                 "laravel/socialite": "^5.0",
                 "php": "^8.3"
             },
+            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -5633,10 +5645,11 @@
                 "MIT"
             ],
             "description": "Laravel client for Fleet central auth: Passport OAuth, optional password grant, Eloquent user sync, fleet:idp:configure CLI.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "source": "https://github.com/shaferllc/fleet-idp-client/tree/main",
+                "issues": "https://github.com/shaferllc/fleet-idp-client/issues"
+            },
+            "time": "2026-03-26T18:01:19+00:00"
         },
         {
             "name": "spiral/core",
@@ -11735,10 +11748,17 @@
             "time": "2025-12-08T11:19:18+00:00"
         }
     ],
-    "aliases": [],
+    "aliases": [
+        {
+            "package": "shaferllc/fleet-idp-client",
+            "version": "dev-main",
+            "alias": "0.9.99",
+            "alias_normalized": "0.9.99.0"
+        }
+    ],
     "minimum-stability": "stable",
     "stability-flags": {
-        "dply/fleet-operator": 20
+        "shaferllc/fleet-idp-client": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

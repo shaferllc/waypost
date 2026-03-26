@@ -14,7 +14,7 @@
     "require": {
         "php": "^8.3",
         "chillerlan/php-qrcode": "^6.0",
-        "dply/fleet-operator": "@dev",
+        "dply/fleet-operator": "^1.0",
         "laravel/framework": "^13.0",
         "laravel/mcp": "^0.6.4",
         "laravel/octane": "^2.17",
@@ -24,7 +24,7 @@
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.0",
         "pragmarx/google2fa": "^9.0",
-        "shaferllc/fleet-idp-client": "^0.9",
+        "shaferllc/fleet-idp-client": "dev-main as 0.9.99",
         "spiral/roadrunner-cli": "^2.6.0",
         "spiral/roadrunner-http": "^3.3.0"
     },
@@ -74,6 +74,10 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "check-fleet-idp-lock": "@php scripts/ensure-fleet-idp-client-not-path.php",
+        "pre-install-cmd": [
+            "@check-fleet-idp-lock"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
