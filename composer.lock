@@ -1054,16 +1054,16 @@
         },
         {
             "name": "fleet/idp-client",
-            "version": "0.3.1",
+            "version": "0.3.2",
             "source": {
                 "type": "git",
                 "url": "git@github.com:shaferllc/fleet-idp-client.git",
-                "reference": "f642daef7cfba32a698768c473f54b3319c1624d"
+                "reference": "ce00f5e96ceba9177cc7dc54ac631b631ee37f0a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://packages.shafer.llc/zipball/fleet/idp-client/f642daef7cfba32a698768c473f54b3319c1624d.zip",
-                "reference": "f642daef7cfba32a698768c473f54b3319c1624d",
+                "url": "https://packages.shafer.llc/zipball/fleet/idp-client/ce00f5e96ceba9177cc7dc54ac631b631ee37f0a.zip",
+                "reference": "ce00f5e96ceba9177cc7dc54ac631b631ee37f0a",
                 "mirrors": [
                     {
                         "url": "https://packages.shafer.llc/zipball/%package%/%reference%.%type%",
@@ -1097,7 +1097,7 @@
                 "MIT"
             ],
             "description": "Laravel client for Fleet central auth: Passport OAuth, optional password grant, Eloquent user sync.",
-            "time": "2026-03-26T00:47:42+00:00"
+            "time": "2026-03-26T00:50:02+00:00"
         },
         {
             "name": "fruitcake/php-cors",
