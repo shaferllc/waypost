@@ -170,7 +170,11 @@ new #[Layout('layouts.guest')] class extends Component
             {{ __('No account yet?') }}
             <a href="{{ route('register') }}" wire:navigate class="font-semibold text-sage-dark hover:text-sage-deeper">{{ __('Create one') }}</a>
         </p>
-        @if (FleetIdpOAuth::isConfigured() || FleetIdpPasswordGrant::isConfigured())
+        @if (filled(config('fleet_idp.provisioning.token')))
+            <p class="mt-2 text-center text-xs text-ink/50">
+                {{ __('New here? Register below—your account is also created in Fleet Auth automatically.') }}
+            </p>
+        @elseif (FleetIdpOAuth::isConfigured() || FleetIdpPasswordGrant::isConfigured())
             <p class="mt-2 text-center text-xs text-ink/50">
                 {{ __('New users: register in Fleet first, then sign in here.') }}
             </p>

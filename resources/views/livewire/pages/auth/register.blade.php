@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Fleet\IdpClient\Events\UserRegisteredForFleetProvisioning;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -29,9 +30,13 @@ new #[Layout('layouts.guest')] class extends Component
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        $plainPassword = $validated['password'];
+        $validated['password'] = Hash::make($plainPassword);
 
-        event(new Registered($user = User::create($validated)));
+        $user = User::create($validated);
+
+        event(new Registered($user));
+        event(new UserRegisteredForFleetProvisioning($user, $plainPassword));
 
         Auth::login($user);
 

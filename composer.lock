@@ -1054,7 +1054,7 @@
         },
         {
             "name": "fleet/idp-client",
-            "version": "0.3.3",
+            "version": "0.3.4",
             "dist": {
                 "type": "path",
                 "url": "../fleet-idp-client",
