@@ -57,6 +57,26 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
+## Deploy (Composer / `fleet/idp-client`)
+
+**`composer install` on the server** must resolve **`fleet/idp-client`** from our private mirror, not a missing local path. Canonical package URL: **[packages.shafer.llc/packages/fleet/idp-client](https://packages.shafer.llc/packages/fleet/idp-client)**.
+
+1. Configure auth for the registry on the build host (Forge/Ploi/GitHub Actions/Docker), e.g.  
+   `composer config http-basic.packages.shafer.llc USERNAME TOKEN`  
+   or set **`COMPOSER_AUTH`** with a base64-encoded `{"http-basic":{"packages.shafer.llc":{"username":"…","password":"…"}}}` payload.
+2. Run **`composer install --no-dev --optimize-autoloader`** (or your pipeline equivalent) from the app root; **`composer.lock`** pins the version.
+3. **Do not** rely on a sibling **`../fleet-idp-client`** checkout on the server — that is only for optional local development (see below).
+4. Optional: after first deploy, run **`php artisan fleet:idp:configure`** (package **≥ 0.4**) from the app root if Fleet Auth exposes **`FLEET_AUTH_CLI_SETUP_TOKEN`** — see the [fleet/idp-client README](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md#cli-bootstrap-fleetidpconfigure).
+
+**Local development** against a git checkout of **`fleet-idp-client`** next to this repo:
+
+```bash
+composer config repositories.fleet-idp-client '{"type":"path","url":"../fleet-idp-client","options":{"symlink":true}}'
+composer update fleet/idp-client
+```
+
+Remove that repository when you want to match production (`composer config --unset repositories.fleet-idp-client` then `composer update fleet/idp-client`).
+
 ## Fleet operator API
 
 Internal JSON endpoints for fleet-wide dashboards (e.g. Fleet Console). Auth is **`dply/fleet-operator`** middleware: **`Authorization: Bearer <token>`** (same secret as **`FLEET_OPERATOR_TOKEN`** in `.env`). If the token is missing or empty, responses are **404** JSON (`Operator API is not configured`).
@@ -75,7 +95,7 @@ Sign-in can use **Fleet Auth** ([shaferllc/fleet-auth](https://github.com/shafer
 - **Registry:** [packages.shafer.llc/packages/fleet/idp-client](https://packages.shafer.llc/packages/fleet/idp-client) (configure `http-basic.packages.shafer.llc` for `composer install`).
 - **Docs (views, routes, controllers):** see the package README “Views and UI” on [GitHub](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md).
 
-This repo’s `composer.json` already includes the `https://packages.shafer.llc` repository (with `canonical: false`) and an optional `../fleet-idp-client` path for local development. **`fleet/idp-client` registers** `GET /oauth/fleet-auth` and the OAuth callback route from `FLEET_IDP_REDIRECT_PATH` (default `/oauth/fleet-auth/callback`); the login UI uses **`x-fleet-idp::oauth-button`** (no app controller).
+This repo’s `composer.json` includes the **`https://packages.shafer.llc`** repository (`canonical: false`). For a path checkout of the package while hacking on it, see [Deploy (Composer / `fleet-idp-client`)](#deploy-composer--fleetidp-client). **`fleet/idp-client` registers** `GET /oauth/fleet-auth` and the OAuth callback route from `FLEET_IDP_REDIRECT_PATH` (default `/oauth/fleet-auth/callback`); the login UI uses **`x-fleet-idp::oauth-button`** (no app controller).
 
 - **Continue with Fleet** — OAuth2 authorization code via package routes; callback path must match Passport.
 - **Email / password** — Passport password grant against the same IdP; the local `User` record is synced from `GET /api/user`. The account must already exist on **Fleet Auth** (e.g. via **`/register`** there).

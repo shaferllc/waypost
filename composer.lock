@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d6260be8bd39b6a83847cc46a3913b33",
+    "content-hash": "a88bb836ceba3fcafcca8f2e5595394e",
     "packages": [
         {
             "name": "brick/math",
@@ -1055,10 +1055,21 @@
         {
             "name": "fleet/idp-client",
             "version": "0.4.0",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:shaferllc/fleet-idp-client.git",
+                "reference": "77be5a4f9939c7e391baf5885a570ed5f15db9a2"
+            },
             "dist": {
-                "type": "path",
-                "url": "../fleet-idp-client",
-                "reference": "1a46348780ff4661ffa5b0345d60a569beed1caa"
+                "type": "zip",
+                "url": "https://packages.shafer.llc/zipball/fleet/idp-client/77be5a4f9939c7e391baf5885a570ed5f15db9a2.zip",
+                "reference": "77be5a4f9939c7e391baf5885a570ed5f15db9a2",
+                "mirrors": [
+                    {
+                        "url": "https://packages.shafer.llc/zipball/%package%/%reference%.%type%",
+                        "preferred": true
+                    }
+                ]
             },
             "require": {
                 "illuminate/console": "^12.0|^13.0",
@@ -1082,14 +1093,12 @@
                     "Fleet\\IdpClient\\": "src/"
                 }
             },
+            "notification-url": "https://packages.shafer.llc/downloads/",
             "license": [
                 "MIT"
             ],
             "description": "Laravel client for Fleet central auth: Passport OAuth, optional password grant, Eloquent user sync.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "time": "2026-03-26T01:08:32+00:00"
         },
         {
             "name": "fruitcake/php-cors",

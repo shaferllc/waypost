@@ -10,13 +10,6 @@
             "type": "composer",
             "url": "https://packages.shafer.llc",
             "canonical": false
-        },
-        {
-            "type": "path",
-            "url": "../fleet-idp-client",
-            "options": {
-                "symlink": true
-            }
         }
     ],
     "require": {
