@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "007deffbc7bb4791f60f2e28158268e3",
+    "content-hash": "7f8036e77180fc225567a3536996a068",
     "packages": [
         {
             "name": "brick/math",
@@ -1054,11 +1054,22 @@
         },
         {
             "name": "fleet/idp-client",
-            "version": "0.2.0",
+            "version": "0.3.1",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:shaferllc/fleet-idp-client.git",
+                "reference": "f642daef7cfba32a698768c473f54b3319c1624d"
+            },
             "dist": {
-                "type": "path",
-                "url": "../fleet-idp-client",
-                "reference": "69bda12675a36c886ae0f7d36fe0c537b0f7539b"
+                "type": "zip",
+                "url": "https://packages.shafer.llc/zipball/fleet/idp-client/f642daef7cfba32a698768c473f54b3319c1624d.zip",
+                "reference": "f642daef7cfba32a698768c473f54b3319c1624d",
+                "mirrors": [
+                    {
+                        "url": "https://packages.shafer.llc/zipball/%package%/%reference%.%type%",
+                        "preferred": true
+                    }
+                ]
             },
             "require": {
                 "illuminate/contracts": "^12.0|^13.0",
@@ -1081,14 +1092,12 @@
                     "Fleet\\IdpClient\\": "src/"
                 }
             },
+            "notification-url": "https://packages.shafer.llc/downloads/",
             "license": [
                 "MIT"
             ],
             "description": "Laravel client for Fleet central auth: Passport OAuth, optional password grant, Eloquent user sync.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "time": "2026-03-26T00:47:42+00:00"
         },
         {
             "name": "fruitcake/php-cors",
