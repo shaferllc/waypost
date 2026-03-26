@@ -31,21 +31,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | MCP server — npm package for editors (npx)
+    | Public base URL (browser + MCP / waypost.json)
     |--------------------------------------------------------------------------
     |
-    | When set (e.g. @shaferllc/mcp-server@1.0.0), end-user MCP config uses
-    | npx -y <value> — no local copy of mcp/waypost-server. Publish the package
-    | to npm first or editors will see npm 404.
-    |
-    | Default is empty: local workspace mode (npx tsx + cwd under
-    | mcp/waypost-server). Users copy that folder, run npm install, open repo root.
-    |
-    | After publishing, set this on production to match package.json, e.g.
-    | WAYPOST_MCP_NPM_PACKAGE=@shaferllc/mcp-server@1.0.0
+    | Defaults to APP_URL. Set this when the URL editors and the MCP server must
+    | call differs from APP_URL (uncommon). Example: local HTTPS with Valet/Herd
+    | — set APP_URL=https://waypost.test (and optionally mirror it here).
     |
     */
 
-    'mcp_npm_package' => env('WAYPOST_MCP_NPM_PACKAGE', ''),
+    'public_url' => env('WAYPOST_PUBLIC_URL', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCP HTTP request logging
+    |--------------------------------------------------------------------------
+    |
+    | When true, each /mcp/waypost response is logged (no body or secrets) and
+    | includes X-Waypost-Mcp-Request-Id for correlation with storage/logs.
+    |
+    */
+
+    'mcp_log_requests' => filter_var(env('WAYPOST_MCP_LOG_REQUESTS', false), FILTER_VALIDATE_BOOL),
 
 ];

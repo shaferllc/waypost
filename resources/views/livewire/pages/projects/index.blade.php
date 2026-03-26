@@ -2,6 +2,7 @@
 
 use App\Models\Project;
 use App\Services\ProjectCursorTokenIssuer;
+use App\Support\WaypostCursorArtifacts;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -23,6 +24,19 @@ class extends Component
     public ?string $lastCreatedCursorToken = null;
 
     public bool $showArchived = false;
+
+    #[Computed]
+    public function lastCreatedProject(): ?Project
+    {
+        if ($this->lastCreatedProjectId === null) {
+            return null;
+        }
+
+        return Project::query()
+            ->accessible(Auth::user())
+            ->whereKey($this->lastCreatedProjectId)
+            ->first();
+    }
 
     #[Computed]
     public function projects()
@@ -57,15 +71,20 @@ class extends Component
 
         $this->lastCreatedProjectId = $project->id;
         $this->lastCreatedCursorToken = app(ProjectCursorTokenIssuer::class)->issue($project, Auth::user());
+        WaypostCursorArtifacts::flashCursorSetupToken($project->id, $this->lastCreatedCursorToken);
 
         $this->reset('name', 'description', 'url');
-        unset($this->projects);
+        unset($this->projects, $this->lastCreatedProject);
     }
 
     public function dismissCreatedBanner(): void
     {
+        if ($this->lastCreatedProjectId !== null) {
+            WaypostCursorArtifacts::forgetCursorSetupToken($this->lastCreatedProjectId);
+        }
         $this->lastCreatedProjectId = null;
         $this->lastCreatedCursorToken = null;
+        unset($this->lastCreatedProject);
     }
 
     public function delete(Project $project): void
@@ -156,22 +175,33 @@ class extends Component
                 >
                     <p class="text-sm font-medium text-ink">Project created.</p>
                     <p class="mt-1 text-sm text-ink/70">
-                        Download <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> into this repo’s root. A project API token was created — copy it below for
-                        <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">WAYPOST_API_TOKEN</code> or paste into <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> as
-                        <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">api_token</code> locally (never commit).
-                        The file includes <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">x_waypost_source</code> so tools can tag AI/API edits in project activity.
-                        On the project page, use <strong>Download Cursor setup (ZIP)</strong> for waypost.json + Cursor rules + README in one step.
+                        Download the Cursor setup ZIP and extract it at your repository root. It includes
+                        <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">waypost.json</code> (with your new API token),
+                        a Cursor rule, and a short README. <strong>Install MCP in Cursor</strong> opens Cursor with that token already embedded — you’ll also see it under
+                        <a href="{{ route('profile') }}" wire:navigate class="font-medium text-sage-dark hover:text-sage-deeper underline">Profile → API tokens</a>
+                        (<span class="font-medium text-ink">Waypost Cursor: …</span>). Do not commit <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">api_token</code>.
                     </p>
-                    @if ($this->lastCreatedCursorToken)
-                        <code class="mt-3 block select-all break-all rounded bg-white p-2 text-xs text-ink ring-1 ring-cream-300">{{ $this->lastCreatedCursorToken }}</code>
-                    @endif
-                    <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
                         <a
-                            href="{{ route('projects.waypost-manifest', ['project' => $this->lastCreatedProjectId]) }}"
-                            download
+                            href="{{ route('projects.waypost-cursor-setup', ['project' => $this->lastCreatedProjectId]) }}"
                             class="inline-flex items-center rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sage-dark"
                         >
-                            Download waypost.json
+                            Download Cursor setup (ZIP)
+                        </a>
+                        @if ($this->lastCreatedProject && $this->lastCreatedCursorToken)
+                            <a
+                                href="{{ \App\Support\WaypostCursorArtifacts::cursorMcpInstallUrl($this->lastCreatedProject, $this->lastCreatedCursorToken) }}"
+                                class="inline-flex items-center rounded-lg border border-sage-dark/30 bg-white px-4 py-2 text-sm font-semibold text-sage-deeper shadow-sm hover:bg-cream-50"
+                            >
+                                Install MCP in Cursor
+                            </a>
+                        @endif
+                        <a
+                            href="{{ route('projects.show', ['project' => $this->lastCreatedProjectId]) }}"
+                            wire:navigate
+                            class="inline-flex items-center rounded-lg bg-cream-200 px-4 py-2 text-sm font-medium text-ink hover:bg-cream-300"
+                        >
+                            Open project
                         </a>
                         <button
                             type="button"
@@ -181,6 +211,20 @@ class extends Component
                             Dismiss
                         </button>
                     </div>
+                    <details class="mt-3 text-sm text-ink/60">
+                        <summary class="cursor-pointer font-medium text-ink/70 hover:text-ink">Advanced</summary>
+                        <p class="mt-2">
+                            <a
+                                href="{{ route('projects.waypost-manifest', ['project' => $this->lastCreatedProjectId]) }}"
+                                download
+                                class="font-medium text-sage-dark hover:text-sage-deeper"
+                            >Download waypost.json only</a>
+                            (no token — use Sync to rotate token and copy, or set <code class="rounded bg-cream-200 px-1 text-xs">WAYPOST_API_TOKEN</code> in MCP).
+                        </p>
+                        @if ($this->lastCreatedCursorToken)
+                            <code class="mt-2 block select-all break-all rounded bg-white p-2 text-xs text-ink ring-1 ring-cream-300">{{ $this->lastCreatedCursorToken }}</code>
+                        @endif
+                    </details>
                 </div>
             @endif
         </div>

@@ -37,6 +37,28 @@ class WaypostCursorMcpInstallLinkTest extends TestCase
         $this->assertSame(WaypostCursorArtifacts::mcpServerConfig($project), $decoded);
     }
 
+    public function test_cursor_install_url_can_embed_bearer_token_in_config(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Demo',
+        ]);
+
+        config(['app.url' => 'https://waypost.example.test']);
+
+        $plain = 'test-plain-token-abc';
+        $url = WaypostCursorArtifacts::cursorMcpInstallUrl($project, $plain);
+
+        $query = parse_url($url, PHP_URL_QUERY);
+        $this->assertIsString($query);
+        parse_str($query, $params);
+        $decoded = json_decode(base64_decode($params['config'], true), true);
+        $this->assertIsArray($decoded);
+        $this->assertSame('Bearer '.$plain, $decoded['headers']['Authorization'] ?? null);
+        $this->assertStringNotContainsString('WAYPOST_API_TOKEN', json_encode($decoded));
+    }
+
     public function test_mcp_servers_snippet_wraps_mcp_server_config(): void
     {
         $user = User::factory()->create();

@@ -11,12 +11,7 @@ Route::middleware('guest')->group(function () {
     Volt::route('login', 'pages.auth.login')
         ->name('login');
 
-    Volt::route('forgot-password', 'pages.auth.forgot-password')
-        ->name('password.request');
-
-    Volt::route('reset-password/{token}', 'pages.auth.reset-password')
-        ->name('password.reset');
-
+    // Forgot / reset password: shaferllc/fleet-idp-client routes/account.php (IdP redirect or local broker).
 });
 
 Route::middleware(['guest', 'two_factor.challenge'])->group(function (): void {

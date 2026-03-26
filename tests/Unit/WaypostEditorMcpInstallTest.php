@@ -59,11 +59,11 @@ class WaypostEditorMcpInstallTest extends TestCase
         $parsed = json_decode(WaypostEditorMcpInstall::vscodeMcpJsonSnippet($project), true);
         $this->assertIsArray($parsed);
         $this->assertArrayHasKey('servers', $parsed);
-        $this->assertSame('stdio', $parsed['servers']['waypost']['type'] ?? null);
+        $this->assertSame('http', $parsed['servers']['waypost']['type'] ?? null);
         $this->assertSame(WaypostCursorArtifacts::mcpServerConfig($project), array_diff_key($parsed['servers']['waypost'], ['type' => true]));
     }
 
-    public function test_mcp_server_config_uses_local_workspace_when_npm_package_empty(): void
+    public function test_mcp_server_config_uses_https_mcp_endpoint(): void
     {
         $user = User::factory()->create();
         $project = Project::query()->create([
@@ -71,15 +71,13 @@ class WaypostEditorMcpInstallTest extends TestCase
             'name' => 'Demo',
         ]);
 
-        config([
-            'app.url' => 'https://app.test',
-            'waypost.mcp_npm_package' => '',
-        ]);
+        config(['app.url' => 'https://app.test']);
 
         $cfg = WaypostCursorArtifacts::mcpServerConfig($project);
-        $this->assertSame('npx', $cfg['command']);
-        $this->assertSame(['tsx', 'src/index.ts'], $cfg['args']);
-        $this->assertArrayHasKey('cwd', $cfg);
-        $this->assertStringContainsString('mcp/waypost-server', (string) $cfg['cwd']);
+        $this->assertSame('https://app.test/mcp/waypost', $cfg['url']);
+        $this->assertArrayHasKey('headers', $cfg);
+        $this->assertStringContainsString('WAYPOST_API_TOKEN', (string) ($cfg['headers']['Authorization'] ?? ''));
+        $this->assertSame('application/json, text/event-stream', $cfg['headers']['Accept'] ?? null);
+        $this->assertSame(WaypostCursorArtifacts::MCP_PROTOCOL_VERSION, $cfg['headers']['MCP-Protocol-Version'] ?? null);
     }
 }

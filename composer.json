@@ -22,8 +22,8 @@
         "php": "^8.3",
         "chillerlan/php-qrcode": "^6.0",
         "dply/fleet-operator": "@dev",
-        "shaferllc/fleet-idp-client": "^0.6",
         "laravel/framework": "^13.0",
+        "laravel/mcp": "^0.6.4",
         "laravel/octane": "^2.17",
         "laravel/reverb": "^1.8",
         "laravel/sanctum": "^4.3",
@@ -32,10 +32,12 @@
         "livewire/livewire": "^3.6.4",
         "livewire/volt": "^1.7.0",
         "pragmarx/google2fa": "^9.0",
+        "shaferllc/fleet-idp-client": "^0.9",
         "spiral/roadrunner-cli": "^2.6.0",
         "spiral/roadrunner-http": "^3.3.0"
     },
     "require-dev": {
+        "beyondcode/helo-laravel": "^2.1",
         "fakerphp/faker": "^1.23",
         "laravel/breeze": "^2.4",
         "laravel/pail": "^1.2.5",

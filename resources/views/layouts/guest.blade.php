@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>@yield('title', config('app.name', 'Laravel'))</title>
 
         <x-favicons />
 
@@ -26,7 +26,11 @@
 
             <div class="flex-1 flex flex-col items-center justify-center px-4 py-10 sm:py-12">
                 <div class="w-full max-w-md rounded-2xl border border-cream-300/80 bg-cream-50 p-6 sm:p-8 shadow-sage ring-1 ring-ink/5">
-                    {{ $slot }}
+                    @hasSection('content')
+                        @yield('content')
+                    @else
+                        {{ $slot }}
+                    @endif
                 </div>
             </div>
 

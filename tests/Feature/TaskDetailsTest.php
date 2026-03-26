@@ -7,7 +7,7 @@ use App\Models\Task;
 use App\Models\TaskLink;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class TaskDetailsTest extends TestCase
@@ -27,7 +27,7 @@ class TaskDetailsTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->call('openTaskDetail', $task->id)
             ->set('commentBody', 'First note')
             ->call('addComment')
@@ -59,7 +59,7 @@ class TaskDetailsTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->call('openTaskDetail', $t1->id)
             ->set('linkTargetTaskId', $t2->id)
             ->set('linkType', TaskLink::TYPE_RELATES)

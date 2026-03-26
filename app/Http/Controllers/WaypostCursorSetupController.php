@@ -32,7 +32,8 @@ class WaypostCursorSetupController extends Controller
             abort(500, 'Could not create ZIP archive.');
         }
 
-        $zip->addFromString('waypost.json', WaypostCursorArtifacts::manifestJson($project, true));
+        $onceToken = WaypostCursorArtifacts::pullCursorSetupToken($project->id);
+        $zip->addFromString('waypost.json', WaypostCursorArtifacts::manifestJson($project, true, $onceToken));
         $zip->addFromString('.cursor/rules/waypost-agent-activity.mdc', WaypostCursorArtifacts::agentRuleMdcBody($project));
         $zip->addFromString('WAYPOST-CURSOR-README.txt', WaypostCursorArtifacts::bundleReadme($project));
         $zip->close();

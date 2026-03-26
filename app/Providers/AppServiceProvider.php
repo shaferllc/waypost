@@ -34,6 +34,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        config([
+            'fleet_idp.account.layout' => 'layouts.guest',
+            'fleet_idp.account.views.forgot_password' => 'auth.forgot-password',
+            'fleet_idp.account.views.reset_password' => 'auth.reset-password',
+        ]);
+
         if (! $this->app->environment('local', 'testing')) {
             URL::forceScheme('https');
         }

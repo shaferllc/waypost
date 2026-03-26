@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class ProjectEditTest extends TestCase
@@ -23,7 +23,7 @@ class ProjectEditTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->call('startEditProject')
             ->assertSet('editingProject', true)
             ->set('editProjectName', 'Renamed')
@@ -50,7 +50,7 @@ class ProjectEditTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->call('startEditProject')
             ->set('editProjectName', 'Should not save')
             ->call('cancelEditProject')

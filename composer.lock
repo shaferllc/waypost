@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "070ab88971eace2054c30f2ef7e8fe4b",
+    "content-hash": "fd925b526cecf632cd571527f3c9a43b",
     "packages": [
         {
             "name": "brick/math",
@@ -1949,6 +1949,79 @@
                 "source": "https://github.com/laravel/framework"
             },
             "time": "2026-03-24T18:42:09+00:00"
+        },
+        {
+            "name": "laravel/mcp",
+            "version": "v0.6.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/mcp.git",
+                "reference": "f822c5eb5beed19adb2e5bfe2f46f8c977ecea42"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/mcp/zipball/f822c5eb5beed19adb2e5bfe2f46f8c977ecea42",
+                "reference": "f822c5eb5beed19adb2e5bfe2f46f8c977ecea42",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "illuminate/console": "^11.45.3|^12.41.1|^13.0",
+                "illuminate/container": "^11.45.3|^12.41.1|^13.0",
+                "illuminate/contracts": "^11.45.3|^12.41.1|^13.0",
+                "illuminate/http": "^11.45.3|^12.41.1|^13.0",
+                "illuminate/json-schema": "^12.41.1|^13.0",
+                "illuminate/routing": "^11.45.3|^12.41.1|^13.0",
+                "illuminate/support": "^11.45.3|^12.41.1|^13.0",
+                "illuminate/validation": "^11.45.3|^12.41.1|^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.20",
+                "orchestra/testbench": "^9.15|^10.8|^11.0",
+                "pestphp/pest": "^3.8.5|^4.3.2",
+                "phpstan/phpstan": "^2.1.27",
+                "rector/rector": "^2.2.4"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Mcp": "Laravel\\Mcp\\Server\\Facades\\Mcp"
+                    },
+                    "providers": [
+                        "Laravel\\Mcp\\Server\\McpServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laravel\\Mcp\\": "src/",
+                    "Laravel\\Mcp\\Server\\": "src/Server/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylor@laravel.com"
+                }
+            ],
+            "description": "Rapidly build MCP servers for your Laravel applications.",
+            "homepage": "https://github.com/laravel/mcp",
+            "keywords": [
+                "laravel",
+                "mcp"
+            ],
+            "support": {
+                "issues": "https://github.com/laravel/mcp/issues",
+                "source": "https://github.com/laravel/mcp"
+            },
+            "time": "2026-03-19T12:37:13+00:00"
         },
         {
             "name": "laravel/octane",
@@ -5595,17 +5668,20 @@
         },
         {
             "name": "shaferllc/fleet-idp-client",
-            "version": "0.6.0",
+            "version": "0.9.9",
             "dist": {
                 "type": "path",
                 "url": "../fleet-idp-client",
-                "reference": "a70507693d26b519a8b96d638d90241f2195d36a"
+                "reference": "413d5c2a8fdd3784f6688e1bace6540730e127f0"
             },
             "require": {
+                "illuminate/auth": "^12.0|^13.0",
                 "illuminate/console": "^12.0|^13.0",
                 "illuminate/contracts": "^12.0|^13.0",
                 "illuminate/database": "^12.0|^13.0",
                 "illuminate/http": "^12.0|^13.0",
+                "illuminate/notifications": "^12.0|^13.0",
+                "illuminate/routing": "^12.0|^13.0",
                 "illuminate/session": "^12.0|^13.0",
                 "illuminate/support": "^12.0|^13.0",
                 "laravel/socialite": "^5.0",
@@ -9463,6 +9539,70 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "beyondcode/helo-laravel",
+            "version": "2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/beyondcode/helo-laravel.git",
+                "reference": "82d6d66a9831a78bc431bc936d069a1e3bad1eff"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/beyondcode/helo-laravel/zipball/82d6d66a9831a78bc431bc936d069a1e3bad1eff",
+                "reference": "82d6d66a9831a78bc431bc936d069a1e3bad1eff",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/console": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+                "illuminate/mail": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+                "illuminate/view": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8.0 || ^9.0 || ^10.0 || ^11.0 || ^12.0",
+                "pestphp/pest": "1.x-dev || 2.x-dev || ^3.7"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "BeyondCode\\HeloLaravel\\HeloLaravelServiceProvider"
+                    ]
+                },
+                "branch-alias": {
+                    "dev-master": "11.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "BeyondCode\\HeloLaravel\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Marcel Pociot",
+                    "email": "marcel@beyondco.de",
+                    "homepage": "https://beyondcode.de",
+                    "role": "Developer"
+                }
+            ],
+            "description": "HELO Laravel debug helper",
+            "homepage": "https://github.com/beyondcode/helo-laravel",
+            "keywords": [
+                "HELO",
+                "beyondcode"
+            ],
+            "support": {
+                "issues": "https://github.com/beyondcode/helo-laravel/issues",
+                "source": "https://github.com/beyondcode/helo-laravel/tree/2.1.0"
+            },
+            "time": "2026-03-20T14:10:31+00:00"
+        },
         {
             "name": "fakerphp/faker",
             "version": "v1.24.1",

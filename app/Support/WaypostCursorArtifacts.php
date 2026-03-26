@@ -3,48 +3,72 @@
 namespace App\Support;
 
 use App\Models\Project;
+use Laravel\Mcp\Server;
 
 final class WaypostCursorArtifacts
 {
     /**
-     * Directory containing package.json for @shaferllc/mcp-server, relative to the opened workspace root.
+     * MCP-Protocol-Version header value negotiated with {@see Server} (see MCP Streamable HTTP spec).
      */
-    public const MCP_SERVER_PACKAGE_DIR = 'mcp/waypost-server';
+    public const MCP_PROTOCOL_VERSION = '2025-11-25';
+
+    /**
+     * Root URL for Sync downloads, MCP env (`WAYPOST_BASE_URL`), and `waypost.json` `api_base`.
+     *
+     * Uses {@see config('waypost.public_url')} when set, otherwise {@see config('app.url')}.
+     */
+    public static function publicBaseUrl(): string
+    {
+        $override = trim((string) config('waypost.public_url', ''));
+
+        if ($override !== '') {
+            return rtrim($override, '/');
+        }
+
+        return rtrim((string) config('app.url'), '/');
+    }
 
     /**
      * Single-server MCP definition for Cursor Settings → MCP / install deeplinks (not the mcpServers wrapper).
      *
-     * Default: {@see config('waypost.mcp_npm_package')} so editors run `npx -y @scope/pkg@version` — no local
-     * clone or npm install in the user’s project (package must be published to npm).
+     * Uses the app-hosted Streamable HTTP MCP endpoint. Without {@see $embedBearerPlaintext}, the Authorization
+     * header uses {@see self::mcpAuthorizationHeaderEnvPlaceholder()} so editors read `WAYPOST_API_TOKEN` from env.
+     * Pass the project token when generating a one-click Cursor install link.
      *
-     * If `waypost.mcp_npm_package` is empty, uses tsx + {@see self::MCP_SERVER_PACKAGE_DIR} for maintainers.
-     *
-     * @return array{command: string, args: list<string>, env: array<string, string>, cwd?: string}
+     * @return array{url: string, headers: array<string, string>}
      */
-    public static function mcpServerConfig(Project $project): array
+    public static function mcpServerConfig(Project $project, ?string $embedBearerPlaintext = null): array
     {
-        $base = rtrim((string) config('app.url'), '/');
-        $env = [
-            'WAYPOST_BASE_URL' => $base,
-            'WAYPOST_PROJECT_ID' => (string) $project->id,
-            'WAYPOST_API_TOKEN' => 'PASTE_YOUR_PROJECT_TOKEN',
-        ];
-
-        $spec = trim((string) config('waypost.mcp_npm_package', '@shaferllc/mcp-server@1.0.0'));
-        if ($spec === '') {
-            return [
-                'command' => 'npx',
-                'args' => ['tsx', 'src/index.ts'],
-                'cwd' => '${workspaceFolder}/'.self::MCP_SERVER_PACKAGE_DIR,
-                'env' => $env,
-            ];
-        }
+        $authorization = (is_string($embedBearerPlaintext) && $embedBearerPlaintext !== '')
+            ? 'Bearer '.$embedBearerPlaintext
+            : self::mcpAuthorizationHeaderEnvPlaceholder();
 
         return [
-            'command' => 'npx',
-            'args' => ['-y', $spec],
-            'env' => $env,
+            'url' => self::mcpHttpUrl(),
+            'headers' => [
+                'Authorization' => $authorization,
+                'Accept' => 'application/json, text/event-stream',
+                'MCP-Protocol-Version' => self::MCP_PROTOCOL_VERSION,
+            ],
         ];
+    }
+
+    public static function mcpHttpUrl(): string
+    {
+        return self::publicBaseUrl().'/mcp/waypost';
+    }
+
+    /**
+     * GET JSON probe for TLS / routing (no auth). Cursor uses POST on {@see mcpHttpUrl()} only.
+     */
+    public static function mcpReachabilityUrl(): string
+    {
+        return self::publicBaseUrl().'/mcp/waypost/reachable';
+    }
+
+    public static function mcpAuthorizationHeaderEnvPlaceholder(): string
+    {
+        return 'Bearer ${env:WAYPOST_API_TOKEN}';
     }
 
     /**
@@ -60,13 +84,13 @@ final class WaypostCursorArtifacts
     }
 
     /**
-     * Cursor deeplink to register this MCP server (user still sets WAYPOST_API_TOKEN in MCP env).
+     * Cursor deeplink to register this MCP server.
      *
      * @see https://cursor.com/docs/context/mcp/install-links
      */
-    public static function cursorMcpInstallUrl(Project $project): string
+    public static function cursorMcpInstallUrl(Project $project, ?string $embedBearerPlaintext = null): string
     {
-        $json = json_encode(self::mcpServerConfig($project), JSON_UNESCAPED_SLASHES);
+        $json = json_encode(self::mcpServerConfig($project, $embedBearerPlaintext), JSON_UNESCAPED_SLASHES);
         if ($json === false) {
             throw new \RuntimeException('Failed to encode MCP config for Cursor install link');
         }
@@ -80,26 +104,63 @@ final class WaypostCursorArtifacts
     /**
      * @return array<string, mixed>
      */
-    public static function manifestPayload(Project $project): array
+    public static function manifestPayload(Project $project, ?string $apiTokenPlaintext = null): array
     {
-        return [
-            'api_base' => rtrim((string) config('app.url'), '/'),
+        $payload = [
+            'api_base' => self::publicBaseUrl(),
+            'mcp_url' => self::mcpHttpUrl(),
             'project_id' => $project->id,
             'project_name' => $project->name,
             'x_waypost_source' => (string) config('waypost.manifest_x_waypost_source', 'ai'),
             /** Use one of these for X-Waypost-Source / agent-events "agent" (plus any WAYPOST_EXTRA_CLIENT_SOURCES). */
             'supported_agent_types' => WaypostSource::suggestedAgentTypes(),
         ];
+
+        if ($apiTokenPlaintext !== null && $apiTokenPlaintext !== '') {
+            $payload['api_token'] = $apiTokenPlaintext;
+        }
+
+        return $payload;
     }
 
-    public static function manifestJson(Project $project, bool $includeBundleNote = false): string
+    public static function manifestJson(Project $project, bool $includeBundleNote = false, ?string $apiTokenPlaintext = null): string
     {
-        $payload = self::manifestPayload($project);
+        $payload = self::manifestPayload($project, $apiTokenPlaintext);
         if ($includeBundleNote) {
-            $payload['_setup'] = 'Paste your project API token from Waypost (project → Sync tab) into api_token, or set WAYPOST_API_TOKEN in MCP env only — never commit secrets.';
+            $payload['_setup'] = ($apiTokenPlaintext !== null && $apiTokenPlaintext !== '')
+                ? 'This bundle includes api_token for first-time setup. Remove api_token from waypost.json before committing. For editor MCP, set WAYPOST_API_TOKEN in the environment (see mcp_url) — never commit secrets.'
+                : 'Paste your project API token from Waypost (project → Sync tab) into api_token, or set WAYPOST_API_TOKEN in the editor environment for MCP (see mcp_url) — never commit secrets.';
         }
 
         return json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
+    }
+
+    /**
+     * Remember the plaintext project token for one ZIP download (same browser session) after project create.
+     */
+    public static function flashCursorSetupToken(int $projectId, string $plainTextToken): void
+    {
+        session()->put(self::cursorSetupTokenSessionKey($projectId), $plainTextToken);
+    }
+
+    /**
+     * Take the one-time token for embedding in waypost.json inside the Cursor setup ZIP, if present.
+     */
+    public static function pullCursorSetupToken(int $projectId): ?string
+    {
+        $t = session()->pull(self::cursorSetupTokenSessionKey($projectId));
+
+        return is_string($t) && $t !== '' ? $t : null;
+    }
+
+    public static function forgetCursorSetupToken(int $projectId): void
+    {
+        session()->forget(self::cursorSetupTokenSessionKey($projectId));
+    }
+
+    private static function cursorSetupTokenSessionKey(int $projectId): string
+    {
+        return 'waypost_cursor_setup_token.'.$projectId;
     }
 
     public static function agentRuleMdcBody(Project $project): string
@@ -118,14 +179,14 @@ final class WaypostCursorArtifacts
 
         return str_replace(
             ['__PROJECT_ID__', '__PROJECT_NAME__', '__API_BASE__'],
-            [(string) $project->id, $name, rtrim((string) config('app.url'), '/')],
+            [(string) $project->id, $name, self::publicBaseUrl()],
             $stub,
         );
     }
 
     public static function bundleReadme(Project $project): string
     {
-        $base = rtrim((string) config('app.url'), '/');
+        $base = self::publicBaseUrl();
         $name = str_replace(["\r", "\n"], ' ', $project->name);
 
         return <<<TXT
@@ -138,20 +199,18 @@ Waypost + Cursor — quick setup
    - .cursor/rules/waypost-agent-activity.mdc
    - this file (WAYPOST-CURSOR-README.txt)
 
-2. MCP install from the Sync tab uses npx to run the published npm package @shaferllc/mcp-server
-   (no copy of mcp/waypost-server into this repo required). If your Waypost admin uses local mode
-   instead, copy mcp/waypost-server here and run npm install inside it.
+2. MCP is served over HTTPS from this Waypost app (see mcp_url in waypost.json). No npm or local
+   MCP package is required in your repo.
 
 3. In Waypost (browser), open this project → Sync tab → reveal or rotate the project API token
    and copy it.
 
 4. Add the token EITHER:
    - into waypost.json as "api_token" (local only; do not commit), OR
-   - into your editor MCP env as WAYPOST_API_TOKEN (recommended).
+   - into your editor environment as WAYPOST_API_TOKEN (recommended for MCP Authorization).
 
-5. Use the project Sync tab → Install in editor (MCP) or Copy MCP config. With the npm package,
-   command is npx -y @shaferllc/mcp-server@… (no cwd). Local-mode installs use cwd under
-   mcp/waypost-server instead.
+5. Use the project Sync tab → Add to Cursor / Copy MCP config. The MCP URL and Bearer header
+   reference WAYPOST_API_TOKEN from your environment.
 
 6. Reload MCP / restart the editor if needed.
 

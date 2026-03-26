@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Password reset tests use package local broker; unset IdP so forgot-password is not a redirect -->
+        <env name="FLEET_IDP_URL" value=""/>
+        <env name="FLEET_IDP_LOCAL_PASSWORD_ONLY" value="true"/>
     </php>
 </phpunit>

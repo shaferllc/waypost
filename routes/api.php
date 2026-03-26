@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ChangelogController;
+use App\Http\Controllers\Api\McpStatusController;
 use App\Http\Controllers\Api\OperatorReadmeController;
 use App\Http\Controllers\Api\OperatorSummaryController;
 use App\Http\Controllers\Api\ProjectAgentEventController;
@@ -16,6 +17,8 @@ Route::middleware('fleet.operator')->get('/operator/summary', [OperatorSummaryCo
 Route::middleware('fleet.operator')->get('/operator/readme', [OperatorReadmeController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function (): void {
+    Route::get('mcp/status', [McpStatusController::class, 'show']);
+
     Route::get('changelog', [ChangelogController::class, 'index']);
 
     Route::get('projects', [ProjectController::class, 'index']);

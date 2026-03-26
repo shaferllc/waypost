@@ -14,12 +14,12 @@ final class WaypostEditorMcpInstall
     /**
      * Payload for VS Code / VS Code Insiders `vscode:mcp/install?…` handler.
      *
-     * @return array{name: string, command: string, args: list<string>, env: array<string, string>, cwd?: string}
+     * @return array{name: string, type: string, url: string, headers: array<string, string>}
      */
     public static function vscodeInstallPayload(Project $project): array
     {
         return array_merge(
-            ['name' => 'waypost'],
+            ['name' => 'waypost', 'type' => 'http'],
             WaypostCursorArtifacts::mcpServerConfig($project),
         );
     }
@@ -41,7 +41,7 @@ final class WaypostEditorMcpInstall
     public static function vscodeMcpJsonSnippet(Project $project): string
     {
         $server = array_merge(
-            ['type' => 'stdio'],
+            ['type' => 'http'],
             WaypostCursorArtifacts::mcpServerConfig($project),
         );
 

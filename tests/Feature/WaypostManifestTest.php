@@ -40,6 +40,7 @@ class WaypostManifestTest extends TestCase
             ->assertHeader('content-disposition', 'attachment; filename="waypost.json"')
             ->assertJson([
                 'api_base' => 'https://waypost.example.test',
+                'mcp_url' => 'https://waypost.example.test/mcp/waypost',
                 'project_id' => $project->id,
                 'project_name' => 'My product',
                 'x_waypost_source' => 'ai',
@@ -49,5 +50,6 @@ class WaypostManifestTest extends TestCase
         $this->assertIsArray($data['supported_agent_types'] ?? null);
         $this->assertContains('cursor', $data['supported_agent_types']);
         $this->assertContains('windsurf', $data['supported_agent_types']);
+        $this->assertArrayNotHasKey('api_token', $data);
     }
 }

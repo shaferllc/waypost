@@ -97,6 +97,7 @@ Sign-in can use **Fleet Auth** ([shaferllc/fleet-auth](https://github.com/shafer
 
 - **Packagist:** [packagist.org/packages/shaferllc/fleet-idp-client](https://packagist.org/packages/shaferllc/fleet-idp-client)
 - **Docs (views, routes, controllers):** see the package README on [GitHub](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md).
+- **Reusing styled account views in other apps** (reset password Blade, Volt profile password form, Fleet-aware notices): [Custom account views](https://github.com/shaferllc/fleet-idp-client/blob/main/docs/wiki/Custom-account-views.md) in the package wiki. Waypost’s reference copies live at `resources/views/auth/reset-password.blade.php`, `resources/views/auth/forgot-password.blade.php`, and `resources/views/livewire/profile/update-password-form.blade.php`.
 
 For deploy notes and local path checkouts, see [Deploy (Composer / `shaferllc/fleet-idp-client`)](#deploy-composer--shaferllcfleet-idp-client). The package registers **`GET /oauth/fleet-auth`** and the OAuth callback route from **`FLEET_IDP_REDIRECT_PATH`** (default **`/oauth/fleet-auth/callback`**); the login UI uses **`x-fleet-idp::oauth-button`** (no app controller).
 

@@ -11,14 +11,14 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class OkrPlanningAndBroadcastTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_create_okr_hierarchy_via_volt(): void
+    public function test_user_can_create_okr_hierarchy_via_livewire(): void
     {
         $user = User::factory()->create();
         $project = Project::query()->create([
@@ -28,7 +28,7 @@ class OkrPlanningAndBroadcastTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->set('tab', 'okrs')
             ->set('okrNewGoalTitle', 'Grow revenue')
             ->call('addOkrGoal')
@@ -36,7 +36,7 @@ class OkrPlanningAndBroadcastTest extends TestCase
 
         $goal = OkrGoal::query()->where('project_id', $project->id)->firstOrFail();
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->set('tab', 'okrs')
             ->set('okrNewObjectiveTitle', 'Expand self-serve')
             ->call('addOkrObjective', $goal->id)
@@ -44,7 +44,7 @@ class OkrPlanningAndBroadcastTest extends TestCase
 
         $objective = OkrObjective::query()->where('okr_goal_id', $goal->id)->firstOrFail();
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->set('tab', 'okrs')
             ->set('okrNewKrTitle', '10k new signups')
             ->set('okrNewKrProgress', 40)
@@ -84,7 +84,7 @@ class OkrPlanningAndBroadcastTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->call('openTaskDetail', $task->id)
             ->set('editTaskOkrObjectiveId', (string) $objective->id)
             ->set('editTaskStartsAt', '2026-03-01')
@@ -140,7 +140,7 @@ class OkrPlanningAndBroadcastTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->call('openTaskDetail', $task->id)
             ->set('editTaskPlanningStatus', Task::PLANNING_BEHIND)
             ->call('saveTaskMeta')
@@ -179,7 +179,7 @@ class OkrPlanningAndBroadcastTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->set('tab', 'okrs')
             ->call('updateOkrKeyResultProgress', $kr->id, 88)
             ->assertHasNoErrors();

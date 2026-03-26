@@ -6,7 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class ProjectRoadmapTest extends TestCase
@@ -53,7 +53,7 @@ class ProjectRoadmapTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('pages.projects.show', ['project' => $project])
+        Livewire::test('pages.projects.show', ['project' => $project])
             ->call('syncKanban', [
                 'backlog' => [],
                 'todo' => [$b->id, $a->id],
