@@ -78,7 +78,8 @@ Sign-in can use **Fleet Auth** ([shaferllc/fleet-auth](https://github.com/shafer
 This repo’s `composer.json` already includes the `https://packages.shafer.llc` repository (with `canonical: false`) and an optional `../fleet-idp-client` path for local development. **`fleet/idp-client` registers** `GET /oauth/fleet-auth` and the OAuth callback route from `FLEET_IDP_REDIRECT_PATH` (default `/oauth/fleet-auth/callback`); the login UI uses **`x-fleet-idp::oauth-button`** (no app controller).
 
 - **Continue with Fleet** — OAuth2 authorization code via package routes; callback path must match Passport.
-- **Email / password** — Passport password grant against the same IdP; the local `User` record is synced from `GET /api/user`.
+- **Email / password** — Passport password grant against the same IdP; the local `User` record is synced from `GET /api/user`. The account must already exist on **Fleet Auth** (e.g. via **`/register`** there).
+- **First-time OAuth** — If you have no Fleet Auth user yet, open **Continue with Fleet**, use **Create account** on the Fleet Auth login page, then approve the app; Waypost **creates your local user** on the callback automatically.
 
 Copy client credentials from Fleet Auth after `php artisan db:seed`. In **Waypost** `.env` (see `.env.example`):
 
