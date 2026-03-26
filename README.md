@@ -57,41 +57,28 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
-## Deploy (Composer / `fleet/idp-client`)
+## Deploy (Composer / `shaferllc/fleet-idp-client`)
 
-**`composer install` on the server** must resolve **`fleet/idp-client`** from our private mirror, not a missing local path. Canonical package URL: **[packages.shafer.llc/packages/fleet/idp-client](https://packages.shafer.llc/packages/fleet/idp-client)**.
+Fleet login uses **`shaferllc/fleet-idp-client`** from **[Packagist](https://packagist.org/packages/shaferllc/fleet-idp-client)** (the **`fleet`** vendor name is taken on Packagist.org, so the package is not named `fleet/idp-client`).
 
-1. Configure auth for the registry on the build host (Forge/Ploi/GitHub Actions/Docker), e.g.  
-   `composer config http-basic.packages.shafer.llc USERNAME TOKEN`  
-   or set **`COMPOSER_AUTH`** with a base64-encoded `{"http-basic":{"packages.shafer.llc":{"username":"…","password":"…"}}}` payload.
-2. Run **`composer install --no-dev --optimize-autoloader`** (or your pipeline equivalent) from the app root; **`composer.lock`** pins the version.
-3. **Do not** rely on a sibling **`../fleet-idp-client`** checkout on the server — that is only for optional local development (see below).
-4. Optional: after first deploy, run **`php artisan fleet:idp:configure`** (package **≥ 0.4**) from the app root if Fleet Auth exposes **`FLEET_AUTH_CLI_SETUP_TOKEN`** — see the [fleet/idp-client README](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md#cli-bootstrap-fleetidpconfigure).
+1. Run **`composer install --no-dev --optimize-autoloader`** on the server; **`composer.lock`** pins the version. No private Composer registry or HTTP-basic auth is required for this package once it is on Packagist.
+2. **Do not** rely on a sibling **`../fleet-idp-client`** checkout on the server — use a path repository only on your laptop (see below).
+3. Optional: after first deploy, run **`php artisan fleet:idp:configure`** if Fleet Auth exposes **`FLEET_AUTH_CLI_SETUP_TOKEN`** — see the [package README](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md#cli-bootstrap-fleetidpconfigure).
+
+**`composer.json`** may include a **`repositories`** entry pointing at this GitHub repo as **VCS** until Packagist lists the first tag; you can **remove** that block after [packagist.org/packages/shaferllc/fleet-idp-client](https://packagist.org/packages/shaferllc/fleet-idp-client) is live — Composer will then use Packagist by default.
 
 **Local development** against a git checkout of **`fleet-idp-client`** next to this repo:
 
 ```bash
 composer config repositories.fleet-idp-client '{"type":"path","url":"../fleet-idp-client","options":{"symlink":true}}'
-composer update fleet/idp-client
+composer update shaferllc/fleet-idp-client
 ```
 
-Remove that repository when you want to match production (`composer config --unset repositories.fleet-idp-client` then `composer update fleet/idp-client`).
+Remove that repository when you want to match production (`composer config --unset repositories.fleet-idp-client` then `composer update shaferllc/fleet-idp-client`).
 
 ### Troubleshooting: `git@github.com: Permission denied (publickey)`
 
-Composer is installing **`fleet/idp-client` from source** (git clone over SSH). Your deploy host has no GitHub SSH key, so the clone fails.
-
-**Private Packeton and public GitHub are independent.** You can keep **`https://packages.shafer.llc`** behind HTTP basic auth and still make **`github.com/shaferllc/fleet-idp-client`** **public**. That does not expose your Composer mirror; it only lets Composer (and anyone) download source/tarballs from GitHub over **HTTPS** without deploy keys. Many internal libraries use a public GitHub repo + private Satis/Packeton metadata, or public GitHub only.
-
-Pick one fix (or combine):
-
-1. **Make the GitHub repo public** (Settings → General → Danger zone → Change repository visibility). After that, Composer usually uses GitHub’s **HTTPS dist zip** and stops calling `git@github.com`. Easiest if the package is not proprietary.
-2. **Fix Packeton** so metadata includes a **`dist`** URL Composer can use without SSH — e.g. enable **dist / zip mirroring** on the Packeton server and give Packeton a **deploy key** or token to read the private GitHub repo when it builds archives (see [Packeton mirroring](https://github.com/vtsykun/packeton/blob/master/docs/usage/mirroring.md)). Clients then download zips **from Packeton**, not from GitHub.
-3. **Keep GitHub private** and give the **deploy server** GitHub HTTPS auth via **`COMPOSER_AUTH`** (not only `packages.shafer.llc`): add a **`github.com`** OAuth token (PAT) so Composer can clone or download archives over HTTPS. See [Composer authentication](https://getcomposer.org/doc/articles/authentication-for-private-packages.md).
-
-To see what Composer was offered, inspect the registry metadata for the package (with your Packeton credentials), e.g. the **`p2/fleet/idp-client.json`** (or equivalent) entry and check whether **`dist`** is present and which **`source.url`** is used.
-
-This project already sets **`"preferred-install": "dist"`** in `composer.json`; if Composer still falls back to **source**, the lock/metadata path did not provide a usable **dist** for that tag.
+Composer is installing **from git source** over SSH. Prefer **Packagist** + **`"preferred-install": "dist"`** (already set in this app) so the host downloads a **zip** instead. Ensure the **`shaferllc/fleet-idp-client`** GitHub repository is **public**, or supply **`COMPOSER_AUTH`** with a **github.com** token for private repos. See [Composer authentication](https://getcomposer.org/doc/articles/authentication-for-private-packages.md).
 
 ## Fleet operator API
 
@@ -106,12 +93,12 @@ Product APIs are defined in `routes/api.php` and `routes/web.php`.
 
 ## Fleet Auth (central login)
 
-Sign-in can use **Fleet Auth** ([shaferllc/fleet-auth](https://github.com/shaferllc/fleet-auth)) via the Composer package **`fleet/idp-client`**:
+Sign-in can use **Fleet Auth** ([shaferllc/fleet-auth](https://github.com/shaferllc/fleet-auth)) via the Composer package **`shaferllc/fleet-idp-client`**:
 
-- **Registry:** [packages.shafer.llc/packages/fleet/idp-client](https://packages.shafer.llc/packages/fleet/idp-client) (configure `http-basic.packages.shafer.llc` for `composer install`).
-- **Docs (views, routes, controllers):** see the package README “Views and UI” on [GitHub](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md).
+- **Packagist:** [packagist.org/packages/shaferllc/fleet-idp-client](https://packagist.org/packages/shaferllc/fleet-idp-client)
+- **Docs (views, routes, controllers):** see the package README on [GitHub](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md).
 
-This repo’s `composer.json` includes the **`https://packages.shafer.llc`** repository (`canonical: false`). For a path checkout of the package while hacking on it, see [Deploy (Composer / `fleet-idp-client`)](#deploy-composer--fleetidp-client). **`fleet/idp-client` registers** `GET /oauth/fleet-auth` and the OAuth callback route from `FLEET_IDP_REDIRECT_PATH` (default `/oauth/fleet-auth/callback`); the login UI uses **`x-fleet-idp::oauth-button`** (no app controller).
+For deploy notes and local path checkouts, see [Deploy (Composer / `shaferllc/fleet-idp-client`)](#deploy-composer--shaferllcfleet-idp-client). The package registers **`GET /oauth/fleet-auth`** and the OAuth callback route from **`FLEET_IDP_REDIRECT_PATH`** (default **`/oauth/fleet-auth/callback`**); the login UI uses **`x-fleet-idp::oauth-button`** (no app controller).
 
 - **Continue with Fleet** — OAuth2 authorization code via package routes; callback path must match Passport.
 - **Email / password** — Passport password grant against the same IdP; the local `User` record is synced from `GET /api/user`. The account must already exist on **Fleet Auth** (e.g. via **`/register`** there).
