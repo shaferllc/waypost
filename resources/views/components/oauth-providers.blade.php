@@ -1,13 +1,9 @@
 @if ($anyEnabled)
 <div {{ $attributes->class(['space-y-3']) }}>
-    @if ($fleetAuthEnabled)
-        <a
-            href="{{ route('oauth.fleet-auth.redirect') }}"
-            class="inline-flex w-full items-center justify-center rounded-lg bg-sage px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-sage-dark focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2 transition ease-in-out duration-150"
-        >
-            {{ __('Continue with Fleet') }}
-        </a>
-    @endif
+    <x-fleet-idp::oauth-button
+        :href="route('oauth.fleet-auth.redirect')"
+        variant="waypost"
+    />
 
     @if ($githubEnabled)
         <a

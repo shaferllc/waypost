@@ -1054,11 +1054,11 @@
         },
         {
             "name": "fleet/idp-client",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "dist": {
                 "type": "path",
                 "url": "../fleet-idp-client",
-                "reference": "7479b9abb954bfb59d8afe80997ace307ad7c20d"
+                "reference": "e948d8fb0d31720f0ec4ad2e870dcafd388e0eca"
             },
             "require": {
                 "illuminate/contracts": "^12.0|^13.0",
