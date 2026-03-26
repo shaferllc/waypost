@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-use Fleet\IdpClient\Events\UserRegisteredForFleetProvisioning;
+use Fleet\IdpClient\Support\FleetProvisioningRequest;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -31,12 +31,12 @@ new #[Layout('layouts.guest')] class extends Component
         ]);
 
         $plainPassword = $validated['password'];
+        FleetProvisioningRequest::stashPasswordForRegisteredEvent($plainPassword);
         $validated['password'] = Hash::make($plainPassword);
 
         $user = User::create($validated);
 
         event(new Registered($user));
-        event(new UserRegisteredForFleetProvisioning($user, $plainPassword));
 
         Auth::login($user);
 
