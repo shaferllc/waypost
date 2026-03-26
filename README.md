@@ -77,6 +77,22 @@ composer update fleet/idp-client
 
 Remove that repository when you want to match production (`composer config --unset repositories.fleet-idp-client` then `composer update fleet/idp-client`).
 
+### Troubleshooting: `git@github.com: Permission denied (publickey)`
+
+Composer is installing **`fleet/idp-client` from source** (git clone over SSH). Your deploy host has no GitHub SSH key, so the clone fails.
+
+**Private Packeton and public GitHub are independent.** You can keep **`https://packages.shafer.llc`** behind HTTP basic auth and still make **`github.com/shaferllc/fleet-idp-client`** **public**. That does not expose your Composer mirror; it only lets Composer (and anyone) download source/tarballs from GitHub over **HTTPS** without deploy keys. Many internal libraries use a public GitHub repo + private Satis/Packeton metadata, or public GitHub only.
+
+Pick one fix (or combine):
+
+1. **Make the GitHub repo public** (Settings → General → Danger zone → Change repository visibility). After that, Composer usually uses GitHub’s **HTTPS dist zip** and stops calling `git@github.com`. Easiest if the package is not proprietary.
+2. **Fix Packeton** so metadata includes a **`dist`** URL Composer can use without SSH — e.g. enable **dist / zip mirroring** on the Packeton server and give Packeton a **deploy key** or token to read the private GitHub repo when it builds archives (see [Packeton mirroring](https://github.com/vtsykun/packeton/blob/master/docs/usage/mirroring.md)). Clients then download zips **from Packeton**, not from GitHub.
+3. **Keep GitHub private** and give the **deploy server** GitHub HTTPS auth via **`COMPOSER_AUTH`** (not only `packages.shafer.llc`): add a **`github.com`** OAuth token (PAT) so Composer can clone or download archives over HTTPS. See [Composer authentication](https://getcomposer.org/doc/articles/authentication-for-private-packages.md).
+
+To see what Composer was offered, inspect the registry metadata for the package (with your Packeton credentials), e.g. the **`p2/fleet/idp-client.json`** (or equivalent) entry and check whether **`dist`** is present and which **`source.url`** is used.
+
+This project already sets **`"preferred-install": "dist"`** in `composer.json`; if Composer still falls back to **source**, the lock/metadata path did not provide a usable **dist** for that tag.
+
 ## Fleet operator API
 
 Internal JSON endpoints for fleet-wide dashboards (e.g. Fleet Console). Auth is **`dply/fleet-operator`** middleware: **`Authorization: Bearer <token>`** (same secret as **`FLEET_OPERATOR_TOKEN`** in `.env`). If the token is missing or empty, responses are **404** JSON (`Operator API is not configured`).
