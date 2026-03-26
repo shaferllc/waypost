@@ -114,9 +114,9 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
     @endif
 
-    <x-oauth-providers class="mb-6" />
+    <x-fleet-idp::social-login-buttons class="mb-6" variant="waypost" />
 
-    @if (\App\View\Components\OauthProviders::isEnabled())
+    @if (\Fleet\IdpClient\View\Components\SocialLoginButtons::isEnabled())
         <div class="relative mb-6">
             <div class="absolute inset-0 flex items-center" aria-hidden="true">
                 <div class="w-full border-t border-cream-300"></div>

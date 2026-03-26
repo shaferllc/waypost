@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a0a680079c64b4da37098fdb05f6a8f6",
+    "content-hash": "070ab88971eace2054c30f2ef7e8fe4b",
     "packages": [
         {
             "name": "brick/math",
@@ -5595,17 +5595,11 @@
         },
         {
             "name": "shaferllc/fleet-idp-client",
-            "version": "0.5.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/shaferllc/fleet-idp-client.git",
-                "reference": "9cc17e1147d9a180efae891a1cc54919f0e45a0c"
-            },
+            "version": "0.6.0",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/shaferllc/fleet-idp-client/zipball/9cc17e1147d9a180efae891a1cc54919f0e45a0c",
-                "reference": "9cc17e1147d9a180efae891a1cc54919f0e45a0c",
-                "shasum": ""
+                "type": "path",
+                "url": "../fleet-idp-client",
+                "reference": "a70507693d26b519a8b96d638d90241f2195d36a"
             },
             "require": {
                 "illuminate/console": "^12.0|^13.0",
@@ -5614,6 +5608,7 @@
                 "illuminate/http": "^12.0|^13.0",
                 "illuminate/session": "^12.0|^13.0",
                 "illuminate/support": "^12.0|^13.0",
+                "laravel/socialite": "^5.0",
                 "php": "^8.3"
             },
             "type": "library",
@@ -5633,11 +5628,10 @@
                 "MIT"
             ],
             "description": "Laravel client for Fleet central auth: Passport OAuth, optional password grant, Eloquent user sync, fleet:idp:configure CLI.",
-            "support": {
-                "source": "https://github.com/shaferllc/fleet-idp-client/tree/v0.5.0",
-                "issues": "https://github.com/shaferllc/fleet-idp-client/issues"
-            },
-            "time": "2026-03-26T01:17:51+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "spiral/core",
