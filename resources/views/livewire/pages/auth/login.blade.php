@@ -1,14 +1,16 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use Fleet\IdpClient\FleetEmailSignIn;
 use Fleet\IdpClient\FleetIdpOAuth;
 use Fleet\IdpClient\FleetIdpPasswordGrant;
+use Fleet\IdpClient\Services\FleetSocialLoginPolicy;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
-use Livewire\Volt\Component;
+use Livewire\Component;
 
 new #[Layout('layouts.guest')] class extends Component
 {
@@ -36,7 +38,7 @@ new #[Layout('layouts.guest')] class extends Component
                 ]);
             }
 
-            if ($user->hasTwoFactorEnabled()) {
+            if ($user->hasTwoFactorEnabled() && FleetSocialLoginPolicy::respectLocalTotpForSessions()) {
                 Session::put([
                     'two_factor.id' => $user->id,
                     'two_factor.remember' => $this->form->remember,
@@ -68,7 +70,7 @@ new #[Layout('layouts.guest')] class extends Component
         $user = Auth::user();
         assert($user !== null);
 
-        if ($user->hasTwoFactorEnabled()) {
+        if ($user->hasTwoFactorEnabled() && FleetSocialLoginPolicy::respectLocalTotpForSessions()) {
             Auth::logout();
 
             Session::put([
@@ -92,6 +94,10 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
+    @php
+        $showPasswordlessLogin = Route::has('login.email-code') && FleetEmailSignIn::guestFlowAvailable();
+    @endphp
+
     <div class="mb-6">
         <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Log in') }}</h1>
         <p class="mt-1 text-sm text-ink/70">{{ __('Welcome back to :app.', ['app' => config('app.name')]) }}</p>
@@ -114,6 +120,12 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
     @endif
 
+    @if (session('error'))
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <x-fleet-idp::social-login-buttons class="mb-6" variant="waypost" />
 
     @if (\Fleet\IdpClient\View\Components\SocialLoginButtons::isEnabled())
@@ -123,6 +135,31 @@ new #[Layout('layouts.guest')] class extends Component
             </div>
             <div class="relative flex justify-center text-xs uppercase tracking-wide">
                 <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or sign in with email') }}</span>
+            </div>
+        </div>
+    @endif
+
+    @if ($showPasswordlessLogin)
+        <div class="mb-6 rounded-xl border border-cream-300/90 bg-white/70 p-4 shadow-sm ring-1 ring-ink/5">
+            <h2 class="text-sm font-semibold text-ink">{{ __('Sign in without your password') }}</h2>
+            <p class="mt-1 text-xs leading-relaxed text-ink/60">
+                {{ __('Use a one-time code or magic link if you turned those on under Profile.') }}
+            </p>
+            <a
+                href="{{ route('login.email-code') }}"
+                wire:navigate
+                class="mt-3 inline-flex w-full items-center justify-center rounded-lg border-2 border-sage/35 bg-white px-4 py-2.5 text-sm font-semibold text-sage-dark shadow-sm hover:border-sage hover:bg-cream-50 focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2 focus:ring-offset-cream-50 transition ease-in-out duration-150"
+            >
+                {{ __('Continue with email code or link') }}
+            </a>
+        </div>
+
+        <div class="relative mb-5">
+            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                <div class="w-full border-t border-cream-300"></div>
+            </div>
+            <div class="relative flex justify-center text-xs uppercase tracking-wide">
+                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or use your password') }}</span>
             </div>
         </div>
     @endif

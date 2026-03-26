@@ -23,6 +23,7 @@ class McpStatusController extends Controller
             'app_name' => config('app.name'),
             'laravel_version' => app()->version(),
             'api_url' => WaypostCursorArtifacts::publicBaseUrl().'/api',
+            'mcp_enabled' => (bool) config('waypost.mcp_enabled', true),
             'mcp_http_url' => WaypostCursorArtifacts::mcpHttpUrl(),
             'mcp_reachability_url' => WaypostCursorArtifacts::mcpReachabilityUrl(),
             'authenticated_user_id' => $user?->id,

@@ -16,7 +16,7 @@ class OAuthRedirectTest extends TestCase
             'services.github.client_secret' => null,
         ]);
 
-        $this->get(route('oauth.redirect', ['provider' => 'github']))
+        $this->get(route('fleet-idp.socialite.redirect', ['provider' => 'github']))
             ->assertNotFound();
     }
 
@@ -27,7 +27,7 @@ class OAuthRedirectTest extends TestCase
             'services.google.client_secret' => null,
         ]);
 
-        $this->get(route('oauth.redirect', ['provider' => 'google']))
+        $this->get(route('fleet-idp.socialite.redirect', ['provider' => 'google']))
             ->assertNotFound();
     }
 
@@ -37,7 +37,7 @@ class OAuthRedirectTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_fleet_auth_redirect_returns_not_found_when_not_configured(): void
+    public function test_fleet_auth_redirects_to_failure_when_not_configured(): void
     {
         config([
             'fleet_idp.url' => '',
@@ -46,6 +46,6 @@ class OAuthRedirectTest extends TestCase
         ]);
 
         $this->get(route('fleet-idp.oauth.redirect'))
-            ->assertNotFound();
+            ->assertRedirect(route('fleet-idp.oauth.failure'));
     }
 }

@@ -13,6 +13,65 @@ class WaypostMcpHttpTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_mcp_post_returns_503_when_mcp_disabled(): void
+    {
+        config(['waypost.mcp_enabled' => false]);
+
+        $this->postJson('/mcp/waypost', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'initialize',
+            'params' => [
+                'protocolVersion' => '2025-06-18',
+                'capabilities' => new \stdClass,
+                'clientInfo' => ['name' => 'phpunit', 'version' => '1.0'],
+            ],
+        ])
+            ->assertStatus(503)
+            ->assertJsonPath('mcp_enabled', false);
+    }
+
+    public function test_mcp_get_sse_requires_bearer_token(): void
+    {
+        $this->get('/mcp/waypost', [
+            'Accept' => 'text/event-stream',
+        ])->assertUnauthorized();
+    }
+
+    public function test_mcp_get_without_event_stream_accept_returns_405(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'MCP GET',
+        ]);
+        $plain = app(ProjectCursorTokenIssuer::class)->issue($project, $user);
+
+        $this->withToken($plain)->get('/mcp/waypost', [
+            'Accept' => 'application/json',
+        ])->assertStatus(405)->assertHeader('Allow');
+    }
+
+    public function test_mcp_get_sse_returns_event_stream_with_token(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'MCP GET SSE',
+        ]);
+        $plain = app(ProjectCursorTokenIssuer::class)->issue($project, $user);
+
+        $response = $this->withToken($plain)->get('/mcp/waypost', [
+            'Accept' => 'text/event-stream',
+        ]);
+
+        $response->assertOk()->assertStreamed();
+        $this->assertStringContainsString('text/event-stream', (string) $response->headers->get('Content-Type'));
+        $streamed = $response->streamedContent();
+        $this->assertStringContainsString('id:', $streamed);
+        $this->assertStringContainsString('retry:', $streamed);
+    }
+
     public function test_mcp_initialize_requires_bearer_token(): void
     {
         $this->postJson('/mcp/waypost', [
@@ -24,7 +83,9 @@ class WaypostMcpHttpTest extends TestCase
                 'capabilities' => new \stdClass,
                 'clientInfo' => ['name' => 'phpunit', 'version' => '1.0'],
             ],
-        ])->assertUnauthorized();
+        ])
+            ->assertUnauthorized()
+            ->assertHeader('www-authenticate', 'Bearer realm="mcp", error="invalid_token"');
     }
 
     /**
@@ -60,6 +121,7 @@ class WaypostMcpHttpTest extends TestCase
 
         $response->assertUnauthorized();
         $response->assertHeader('content-type', 'application/json');
+        $response->assertHeader('www-authenticate', 'Bearer realm="mcp", error="invalid_token"');
     }
 
     public function test_mcp_tool_call_proxies_authenticated_api_request(): void

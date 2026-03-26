@@ -56,7 +56,9 @@ final class WaypostMcpInternalApi
 
         $kernel = app(Kernel::class);
         $response = $kernel->handle($sub);
-        $kernel->terminate($sub, $response);
+
+        // Do not call Kernel::terminate() for nested requests: terminateMiddleware()
+        // resolves route middleware by container make(name) and breaks on aliases like token.project.
 
         return $response;
     }

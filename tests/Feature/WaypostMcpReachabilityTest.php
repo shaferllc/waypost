@@ -13,10 +13,22 @@ class WaypostMcpReachabilityTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('ok', true)
+            ->assertJsonPath('mcp_enabled', true)
             ->assertJsonPath('mcp_post_url', WaypostCursorArtifacts::mcpHttpUrl());
 
         if (str_starts_with(WaypostCursorArtifacts::mcpHttpUrl(), 'http://')) {
             $response->assertJsonPath('http_redirect_warning', fn ($v) => is_string($v) && $v !== '');
         }
+    }
+
+    public function test_mcp_reachability_reports_disabled_when_waypost_mcp_enabled_false(): void
+    {
+        config(['waypost.mcp_enabled' => false]);
+
+        $this->getJson('/mcp/waypost/reachable')
+            ->assertOk()
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('mcp_enabled', false)
+            ->assertJsonPath('mcp_post_url', WaypostCursorArtifacts::mcpHttpUrl());
     }
 }

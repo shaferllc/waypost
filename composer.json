@@ -7,13 +7,6 @@
     "license": "MIT",
     "repositories": [
         {
-            "type": "path",
-            "url": "../fleet-idp-client",
-            "options": {
-                "symlink": true
-            }
-        },
-        {
             "type": "vcs",
             "url": "https://github.com/shaferllc/fleet-idp-client"
         }
@@ -29,8 +22,7 @@
         "laravel/sanctum": "^4.3",
         "laravel/socialite": "^5.26",
         "laravel/tinker": "^3.0",
-        "livewire/livewire": "^3.6.4",
-        "livewire/volt": "^1.7.0",
+        "livewire/livewire": "^4.0",
         "pragmarx/google2fa": "^9.0",
         "shaferllc/fleet-idp-client": "^0.9",
         "spiral/roadrunner-cli": "^2.6.0",

@@ -41,6 +41,7 @@ class WaypostManifestTest extends TestCase
             ->assertJson([
                 'api_base' => 'https://waypost.example.test',
                 'mcp_url' => 'https://waypost.example.test/mcp/waypost',
+                'mcp_enabled' => true,
                 'project_id' => $project->id,
                 'project_name' => 'My product',
                 'x_waypost_source' => 'ai',

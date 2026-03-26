@@ -15,6 +15,9 @@ use App\Observers\OkrObjectiveObserver;
 use App\Observers\ProjectLinkObserver;
 use App\Observers\TaskObserver;
 use App\Observers\WishlistItemObserver;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
@@ -34,10 +37,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('mcp', function (Request $request): Limit {
+            return Limit::perMinute(120)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip()));
+        });
+
         config([
             'fleet_idp.account.layout' => 'layouts.guest',
             'fleet_idp.account.views.forgot_password' => 'auth.forgot-password',
             'fleet_idp.account.views.reset_password' => 'auth.reset-password',
+            'fleet_idp.email_sign_in.user_code_enabled_attribute' => 'email_login_code_enabled',
+            'fleet_idp.email_sign_in.user_magic_link_enabled_attribute' => 'email_login_magic_link_enabled',
+            'fleet_idp.email_sign_in.profile_confirm.interstitial_layout' => 'layouts.guest',
+            'fleet_idp.email_sign_in.mutually_exclusive_code_and_magic' => true,
         ]);
 
         if (! $this->app->environment('local', 'testing')) {

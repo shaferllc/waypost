@@ -12,7 +12,9 @@ class WaypostDebugMcpCommandTest extends TestCase
         Artisan::call('waypost:debug-mcp');
         $out = Artisan::output();
 
+        $this->assertStringContainsString('mcp_enabled: true', $out);
         $this->assertStringContainsString('Access-Control-Allow-Private-Network: true', $out);
+        $this->assertStringContainsString('HTTP 204', $out);
         $this->assertStringContainsString('HTTP 401', $out);
     }
 }

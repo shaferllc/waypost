@@ -1,10 +1,11 @@
 <?php
 
 use App\Services\TwoFactorAuthenticationService;
+use Fleet\IdpClient\Support\ProfileTwoFactorSettings;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Livewire\Volt\Component;
+use Livewire\Component;
 
 new class extends Component
 {
@@ -20,6 +21,10 @@ new class extends Component
     public function beginSetup(TwoFactorAuthenticationService $twoFactor): void
     {
         $user = Auth::user();
+
+        if (! ProfileTwoFactorSettings::mayBeginSetup()) {
+            return;
+        }
 
         if ($user->hasTwoFactorEnabled() || $user->hasPendingTwoFactorSetup()) {
             return;
@@ -87,6 +92,12 @@ new class extends Component
         $user = Auth::user();
         if (! $user->hasTwoFactorEnabled()) {
             return;
+        }
+
+        if (! ProfileTwoFactorSettings::mayDisable()) {
+            throw ValidationException::withMessages([
+                'current_password' => __('This app requires two-factor authentication. You cannot turn it off.'),
+            ]);
         }
 
         $this->validateCredentials($user);
@@ -197,9 +208,13 @@ new class extends Component
             @endif
 
             <div class="flex flex-wrap gap-3">
-                <x-danger-button type="button" wire:click="disable">
-                    {{ __('Disable 2FA') }}
-                </x-danger-button>
+                @if (ProfileTwoFactorSettings::mayDisable())
+                    <x-danger-button type="button" wire:click="disable">
+                        {{ __('Disable 2FA') }}
+                    </x-danger-button>
+                @else
+                    <p class="text-sm text-ink/65 w-full">{{ __('Two-factor authentication is required for this app and cannot be turned off.') }}</p>
+                @endif
 
                 <x-secondary-button type="button" wire:click="regenerateRecoveryCodes">
                     {{ __('Regenerate recovery codes') }}

@@ -4,7 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use PragmaRX\Google2FA\Google2FA;
 use Tests\TestCase;
 
@@ -22,7 +22,7 @@ class TwoFactorAuthenticationTest extends TestCase
             'two_factor_confirmed_at' => now(),
         ]);
 
-        Volt::test('pages.auth.login')
+        Livewire::test('pages.auth.login')
             ->set('form.email', $user->email)
             ->set('form.password', 'password')
             ->call('login')
@@ -49,7 +49,7 @@ class TwoFactorAuthenticationTest extends TestCase
             'two_factor.remember' => false,
         ]);
 
-        Volt::test('pages.auth.two-factor-challenge')
+        Livewire::test('pages.auth.two-factor-challenge')
             ->set('code', $code)
             ->call('verify')
             ->assertRedirect(route('dashboard'));

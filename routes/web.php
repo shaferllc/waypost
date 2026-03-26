@@ -9,7 +9,6 @@ use App\Http\Controllers\WaypostAgentRuleController;
 use App\Http\Controllers\WaypostCursorSetupController;
 use App\Http\Controllers\WaypostManifestController;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::view('/', 'welcome');
 
@@ -29,11 +28,11 @@ Route::get('docs/api', ApiDocsController::class)
     ->middleware(['auth'])
     ->name('docs.api');
 
-Volt::route('projects', 'pages.projects.index')
+Route::livewire('projects', 'pages.projects.index')
     ->middleware(['auth', 'verified'])
     ->name('projects.index');
 
-Volt::route('projects/{project}', 'pages.projects.show')
+Route::livewire('projects/{project}', 'pages.projects.show')
     ->middleware(['auth', 'verified'])
     ->name('projects.show');
 

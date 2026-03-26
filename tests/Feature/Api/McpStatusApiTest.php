@@ -27,16 +27,30 @@ class McpStatusApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('authenticated_user_id', $user->id)
             ->assertJsonPath('token_project_scope', null)
+            ->assertJsonPath('mcp_enabled', true)
             ->assertJsonPath('mcp_http_url', WaypostCursorArtifacts::mcpHttpUrl())
             ->assertJsonPath('mcp_reachability_url', WaypostCursorArtifacts::mcpReachabilityUrl())
             ->assertJsonStructure([
                 'app_name',
                 'laravel_version',
                 'api_url',
+                'mcp_enabled',
                 'mcp_http_url',
                 'mcp_reachability_url',
                 'authenticated_user_id',
                 'token_project_scope',
             ]);
+    }
+
+    public function test_mcp_status_reports_mcp_enabled_false_when_configured(): void
+    {
+        config(['waypost.mcp_enabled' => false]);
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/mcp/status')
+            ->assertOk()
+            ->assertJsonPath('mcp_enabled', false);
     }
 }

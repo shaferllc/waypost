@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class PasswordUpdateTest extends TestCase
@@ -20,7 +20,7 @@ class PasswordUpdateTest extends TestCase
 
         $this->actingAs($user);
 
-        $component = Volt::test('profile.update-password-form')
+        $component = Livewire::test('profile.update-password-form')
             ->set('current_password', 'password')
             ->set('password', 'new-password')
             ->set('password_confirmation', 'new-password')
@@ -39,7 +39,7 @@ class PasswordUpdateTest extends TestCase
 
         $this->actingAs($user);
 
-        $component = Volt::test('profile.update-password-form')
+        $component = Livewire::test('profile.update-password-form')
             ->set('current_password', 'wrong-password')
             ->set('password', 'new-password')
             ->set('password_confirmation', 'new-password')
@@ -60,7 +60,7 @@ class PasswordUpdateTest extends TestCase
 
         $this->actingAs($user);
 
-        $component = Volt::test('profile.update-password-form')
+        $component = Livewire::test('profile.update-password-form')
             ->set('password', 'new-password')
             ->set('password_confirmation', 'new-password')
             ->call('updatePassword');
@@ -92,7 +92,7 @@ class PasswordUpdateTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('profile.update-password-form')
+        Livewire::test('profile.update-password-form')
             ->set('current_password', 'current-plain')
             ->set('password', 'new-password-99')
             ->set('password_confirmation', 'new-password-99')
@@ -136,7 +136,7 @@ class PasswordUpdateTest extends TestCase
 
         $this->actingAs($user);
 
-        Volt::test('profile.update-password-form')
+        Livewire::test('profile.update-password-form')
             ->set('current_password', 'wrong')
             ->set('password', 'new-password-99')
             ->set('password_confirmation', 'new-password-99')

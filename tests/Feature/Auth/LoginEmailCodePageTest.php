@@ -30,7 +30,7 @@ class LoginEmailCodePageTest extends TestCase
 
         $this->get(route('login.email-code'))
             ->assertOk()
-            ->assertSeeVolt('pages.auth.login-email-code');
+            ->assertSeeLivewire('pages.auth.login-email-code');
     }
 
     public function test_email_code_login_page_renders_when_configured_and_policy_allows(): void
@@ -52,6 +52,6 @@ class LoginEmailCodePageTest extends TestCase
 
         $this->get(route('login.email-code'))
             ->assertOk()
-            ->assertSeeVolt('pages.auth.login-email-code');
+            ->assertSeeLivewire('pages.auth.login-email-code');
     }
 }

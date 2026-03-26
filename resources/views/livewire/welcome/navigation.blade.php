@@ -1,3 +1,10 @@
+<?php
+
+use Livewire\Component;
+
+new class extends Component {};
+?>
+
 <nav class="flex items-center justify-end gap-1 sm:gap-2">
     @auth
         <a

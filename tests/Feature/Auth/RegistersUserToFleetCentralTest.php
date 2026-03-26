@@ -5,7 +5,7 @@ namespace Tests\Feature\Auth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
-use Livewire\Volt\Volt;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class RegistersUserToFleetCentralTest extends TestCase
@@ -21,7 +21,7 @@ class RegistersUserToFleetCentralTest extends TestCase
             'fleet-auth.test/api/provisioning/users' => Http::response(['status' => 'created'], 201),
         ]);
 
-        $component = Volt::test('pages.auth.register')
+        $component = Livewire::test('pages.auth.register')
             ->set('name', 'Fleet User')
             ->set('email', 'fleet-user@example.com')
             ->set('password', 'password')

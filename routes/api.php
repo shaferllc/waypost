@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('fleet.operator')->get('/operator/summary', [OperatorSummaryController::class, 'show']);
 Route::middleware('fleet.operator')->get('/operator/readme', [OperatorReadmeController::class, 'show']);
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'verified'])->group(function (): void {
     Route::get('mcp/status', [McpStatusController::class, 'show']);
 
     Route::get('changelog', [ChangelogController::class, 'index']);

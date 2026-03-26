@@ -55,7 +55,7 @@ final class WaypostCursorArtifacts
 
     public static function mcpHttpUrl(): string
     {
-        return self::publicBaseUrl().'/mcp/waypost';
+        return self::mcpEndpointSchemeAdjustedBase().'/mcp/waypost';
     }
 
     /**
@@ -63,7 +63,31 @@ final class WaypostCursorArtifacts
      */
     public static function mcpReachabilityUrl(): string
     {
-        return self::publicBaseUrl().'/mcp/waypost/reachable';
+        return self::mcpEndpointSchemeAdjustedBase().'/mcp/waypost/reachable';
+    }
+
+    /**
+     * Public base URL with optional http→https upgrade for MCP-only paths (Herd/Valet).
+     */
+    private static function mcpEndpointSchemeAdjustedBase(): string
+    {
+        $base = self::publicBaseUrl();
+        if (! str_starts_with($base, 'http://')) {
+            return $base;
+        }
+
+        $host = parse_url($base, PHP_URL_HOST);
+        $host = is_string($host) ? $host : '';
+
+        $cfg = config('waypost.mcp_upgrade_http_to_https');
+        $upgrade = $cfg === true
+            || ($cfg === null && str_ends_with($host, '.test'));
+
+        if (! $upgrade) {
+            return $base;
+        }
+
+        return 'https://'.substr($base, 7);
     }
 
     public static function mcpAuthorizationHeaderEnvPlaceholder(): string
@@ -109,6 +133,7 @@ final class WaypostCursorArtifacts
         $payload = [
             'api_base' => self::publicBaseUrl(),
             'mcp_url' => self::mcpHttpUrl(),
+            'mcp_enabled' => (bool) config('waypost.mcp_enabled', true),
             'project_id' => $project->id,
             'project_name' => $project->name,
             'x_waypost_source' => (string) config('waypost.manifest_x_waypost_source', 'ai'),
