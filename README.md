@@ -68,3 +68,20 @@ Internal JSON endpoints for fleet-wide dashboards (e.g. Fleet Console). Auth is 
 
 Product APIs are defined in `routes/api.php` and `routes/web.php`.
 
+## Fleet Auth (central login)
+
+Sign-in can use **Fleet Auth** ([shaferllc/fleet-auth](https://github.com/shaferllc/fleet-auth)) via the Composer package **[fleet/idp-client](https://github.com/shaferllc/fleet-idp-client)**:
+
+- **Continue with Fleet** — OAuth2 authorization code; callback at `/oauth/fleet-auth/callback`.
+- **Email / password** — Passport password grant against the same IdP; the local `User` record is synced from `GET /api/user`.
+
+Copy client credentials from Fleet Auth after `php artisan db:seed`. In **Waypost** `.env` (see `.env.example`):
+
+| Variable | Purpose |
+|----------|---------|
+| `FLEET_IDP_URL` | Fleet Auth base URL only (not Waypost’s callback) |
+| `FLEET_IDP_CLIENT_ID` / `FLEET_IDP_CLIENT_SECRET` | Auth-code client |
+| `FLEET_IDP_REDIRECT_URI` | Default `${APP_URL}/oauth/fleet-auth/callback` — must match Passport |
+| `FLEET_IDP_PASSWORD_CLIENT_ID` / `FLEET_IDP_PASSWORD_CLIENT_SECRET` | Password grant client |
+| `FLEET_IDP_USER_MODEL` | Optional; defaults to `App\Models\User` |
+
