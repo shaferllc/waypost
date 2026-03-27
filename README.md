@@ -62,18 +62,13 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 Fleet login uses **`shaferllc/fleet-idp-client`** from **[Packagist](https://packagist.org/packages/shaferllc/fleet-idp-client)** (the **`fleet`** vendor name is taken on Packagist.org, so the package is not named `fleet/idp-client`).
 
 1. Run **`composer install --no-dev --optimize-autoloader`** on the server; **`composer.lock`** pins the version. No private Composer registry or HTTP-basic auth is required for this package once it is on Packagist.
-2. **Do not** commit a **`path`** repository to **`../fleet-idp-client`** — that breaks clones where the sibling folder does not exist (`Source path "../fleet-idp-client" is not found`). This app resolves **`shaferllc/fleet-idp-client`** from **GitHub `main`** (`dev-main as 0.9.99` in **`composer.json`**) until **v0.9+** tags are published on [Packagist](https://packagist.org/packages/shaferllc/fleet-idp-client); then you can switch the require line to **`^0.9`** and drop the VCS repo if you prefer dist installs only.
+2. **`composer.json`** lists a **`path`** repository for **`../fleet-idp-client`** first (symlinked local package). On hosts **without** that sibling folder, remove that repository block (keep the VCS entry) and run **`composer update shaferllc/fleet-idp-client`** so the lock uses **dist/git** again. The fallback VCS URL is **GitHub `main`** (`dev-main as 0.9.99`) until **v0.9+** tags exist on [Packagist](https://packagist.org/packages/shaferllc/fleet-idp-client).
 3. Optional: after first deploy, run **`php artisan fleet:idp:configure`** if Fleet Auth exposes **`FLEET_AUTH_CLI_SETUP_TOKEN`** — see the [package README](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md#cli-bootstrap-fleetidpconfigure).
 4. Optional: publish themed package assets once per app — **`php artisan fleet:idp:install`** (views under **`resources/views/vendor/fleet-idp/`**, lang, account layout stub).
 
-**Local development** against a git checkout of **`fleet-idp-client`** next to this repo:
+**Local development** with **`fleet-idp-client`** next to this repo (`Apps/fleet-idp-client` + `Apps/waypost`): the path repository is already in **`composer.json`**. Run **`composer update shaferllc/fleet-idp-client`** once; **`vendor/shaferllc/fleet-idp-client`** becomes a symlink. The package **`composer.json`** uses **`"version": "dev-main"`** so it satisfies **`dev-main as 0.9.99`**.
 
-```bash
-composer config repositories.fleet-idp-client '{"type":"path","url":"../fleet-idp-client","options":{"symlink":true}}'
-composer update shaferllc/fleet-idp-client
-```
-
-Remove that repository when you want to match production (`composer config --unset repositories.fleet-idp-client` then `composer update shaferllc/fleet-idp-client`).
+If **`composer.lock`** records a **path** install, **`composer install`** expects either an empty **`.fleet-idp-client-path`** file in the app root (gitignored) or **`ALLOW_FLEET_IDP_CLIENT_PATH=1`**. Without those, the pre-install script reminds you to switch back to a dist lock before CI/deploy.
 
 ### Troubleshooting: `Source path "../fleet-idp-client" is not found`
 
@@ -83,7 +78,7 @@ That means **`composer.lock`** still records **`shaferllc/fleet-idp-client`** as
 2. If you added a path repo locally: **`composer config --unset repositories.fleet-idp-client`** (or whatever name you used), then update again.
 3. Check global config: **`composer config --global --list`** and remove any **`repositories.*`** entry pointing at **`../fleet-idp-client`**.
 
-This repo runs **`@check-fleet-idp-lock`** on **`composer install`** so a stale path-based lock fails fast with the same instructions.
+This repo runs **`@check-fleet-idp-lock`** on **`composer install`** so an accidental path-based lock fails CI unless you opt in with **`.fleet-idp-client-path`** or **`ALLOW_FLEET_IDP_CLIENT_PATH`**.
 
 ### Troubleshooting: `git@github.com: Permission denied (publickey)`
 

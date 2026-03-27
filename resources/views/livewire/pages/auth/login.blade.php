@@ -1,9 +1,6 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
-use Fleet\IdpClient\FleetEmailSignIn;
-use Fleet\IdpClient\FleetIdpEmailLogin;
-use Fleet\IdpClient\FleetIdpOAuth;
 use Fleet\IdpClient\FleetIdpPasswordGrant;
 use Fleet\IdpClient\Services\FleetSocialLoginPolicy;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +13,13 @@ use Livewire\Component;
 new #[Layout('layouts.guest')] class extends Component
 {
     public LoginForm $form;
+
+    public function mount(): void
+    {
+        if (rtrim((string) config('fleet_idp.url', ''), '/') !== '') {
+            FleetSocialLoginPolicy::snapshot();
+        }
+    }
 
     /**
      * Handle an incoming authentication request.
@@ -95,82 +99,15 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    @php
-        // guestFlowAvailable() is always true in the package (local + Fleet paths).
-        // Without Fleet password grant, hide this card unless explicitly enabled for satellite-only passwordless.
-        $showPasswordlessLogin = Route::has('login.email-code')
-            && FleetEmailSignIn::guestFlowAvailable()
-            && (
-                FleetIdpEmailLogin::isAvailable()
-                || filter_var(config('waypost.email_sign_in_login_card_without_fleet'), FILTER_VALIDATE_BOOL)
-            );
-    @endphp
-
     <div class="mb-6">
         <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Log in') }}</h1>
         <p class="mt-1 text-sm text-ink/70">{{ __('Welcome back to :app.', ['app' => config('app.name')]) }}</p>
-        @if (FleetIdpPasswordGrant::isConfigured())
-            <p class="mt-3 text-xs leading-relaxed text-ink/55">
-                {{ __('Your Waypost profile is synced from Fleet. Sign in with the same email and password you use there (or use Fleet sign-in).') }}
-            </p>
-        @elseif (FleetIdpOAuth::isConfigured())
-            <p class="mt-3 text-xs leading-relaxed text-ink/55">
-                {{ __('Use Fleet sign-in to create your session from the central auth site. Email login below uses your local Waypost password unless password sync is configured.') }}
-            </p>
-        @endif
     </div>
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    @if (session('oauth_error'))
-        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
-            {{ session('oauth_error') }}
-        </div>
-    @endif
-
-    @if (session('error'))
-        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
-            {{ session('error') }}
-        </div>
-    @endif
-
-    <x-fleet-idp::social-login-buttons class="mb-6" variant="waypost" />
-
-    @if (\Fleet\IdpClient\View\Components\SocialLoginButtons::isEnabled())
-        <div class="relative mb-6">
-            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                <div class="w-full border-t border-cream-300"></div>
-            </div>
-            <div class="relative flex justify-center text-xs uppercase tracking-wide">
-                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or sign in with email') }}</span>
-            </div>
-        </div>
-    @endif
-
-    @if ($showPasswordlessLogin)
-        <div class="mb-6 rounded-xl border border-cream-300/90 bg-white/70 p-4 shadow-sm ring-1 ring-ink/5">
-            <h2 class="text-sm font-semibold text-ink">{{ __('Sign in without your password') }}</h2>
-            <p class="mt-1 text-xs leading-relaxed text-ink/60">
-                {{ __('Use a one-time code or magic link if you turned those on under Profile.') }}
-            </p>
-            <a
-                href="{{ route('login.email-code') }}"
-                wire:navigate
-                class="mt-3 inline-flex w-full items-center justify-center rounded-lg border-2 border-sage/35 bg-white px-4 py-2.5 text-sm font-semibold text-sage-dark shadow-sm hover:border-sage hover:bg-cream-50 focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2 focus:ring-offset-cream-50 transition ease-in-out duration-150"
-            >
-                {{ __('Continue with email code or link') }}
-            </a>
-        </div>
-
-        <div class="relative mb-5">
-            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                <div class="w-full border-t border-cream-300"></div>
-            </div>
-            <div class="relative flex justify-center text-xs uppercase tracking-wide">
-                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or use your password') }}</span>
-            </div>
-        </div>
-    @endif
+    {{-- Fleet OAuth button, dividers, passwordless card: vendor/shaferllc/fleet-idp-client/.../login-screen-fleet-surfaces.blade.php --}}
+    <x-fleet-idp::login-screen-fleet-surfaces variant="waypost" :wire-navigate="true" />
 
     <form wire:submit="login" class="space-y-4">
         <div>
@@ -215,14 +152,6 @@ new #[Layout('layouts.guest')] class extends Component
             {{ __('No account yet?') }}
             <a href="{{ route('register') }}" wire:navigate class="font-semibold text-sage-dark hover:text-sage-deeper">{{ __('Create one') }}</a>
         </p>
-        @if (filled(config('fleet_idp.provisioning.token')))
-            <p class="mt-2 text-center text-xs text-ink/50">
-                {{ __('New here? Register below—your account is also created in Fleet Auth automatically.') }}
-            </p>
-        @elseif (FleetIdpOAuth::isConfigured() || FleetIdpPasswordGrant::isConfigured())
-            <p class="mt-2 text-center text-xs text-ink/50">
-                {{ __('New users: register in Fleet first, then sign in here.') }}
-            </p>
-        @endif
+        <x-fleet-idp::login-screen-fleet-register-footnotes />
     @endif
 </div>

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "00397ae53af4d61901b4e96b8d8108c1",
+    "content-hash": "00bc66fc462fa7b5fd7fe412b03aca74",
     "packages": [
         {
             "name": "brick/math",
@@ -5603,16 +5603,10 @@
         {
             "name": "shaferllc/fleet-idp-client",
             "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "git@github.com:shaferllc/fleet-idp-client.git",
-                "reference": "6fe403ee51e016b720bddc11f7eb56608a6ad301"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/shaferllc/fleet-idp-client/zipball/6fe403ee51e016b720bddc11f7eb56608a6ad301",
-                "reference": "6fe403ee51e016b720bddc11f7eb56608a6ad301",
-                "shasum": ""
+                "type": "path",
+                "url": "../fleet-idp-client",
+                "reference": "5bf432bc2b950557847b9b415df46e597ab055d3"
             },
             "require": {
                 "illuminate/auth": "^12.0|^13.0",
@@ -5627,7 +5621,6 @@
                 "laravel/socialite": "^5.0",
                 "php": "^8.3"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -5645,11 +5638,10 @@
                 "MIT"
             ],
             "description": "Laravel client for Fleet central auth: Passport OAuth, optional password grant, Eloquent user sync, fleet:idp:configure CLI.",
-            "support": {
-                "source": "https://github.com/shaferllc/fleet-idp-client/tree/main",
-                "issues": "https://github.com/shaferllc/fleet-idp-client/issues"
-            },
-            "time": "2026-03-26T18:01:19+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "spiral/core",
