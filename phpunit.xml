@@ -35,5 +35,7 @@
         <!-- Password reset tests use package local broker; unset IdP so forgot-password is not a redirect -->
         <env name="FLEET_IDP_URL" value=""/>
         <env name="FLEET_IDP_LOCAL_PASSWORD_ONLY" value="true"/>
+        <!-- Feature tests assert Fleet login surfaces when IdP is configured; app default is off (WAYPOST_FLEET_LOGIN_ENABLED=false). -->
+        <env name="WAYPOST_FLEET_LOGIN_ENABLED" value="true"/>
     </php>
 </phpunit>

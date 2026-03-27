@@ -56,17 +56,19 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
     @endif
 
-    <x-fleet-idp::social-login-buttons class="mb-6" variant="waypost" />
+    @if (config('waypost.fleet_login_enabled'))
+        <x-fleet-idp::social-login-buttons class="mb-6" variant="waypost" />
 
-    @if (\Fleet\IdpClient\View\Components\SocialLoginButtons::isEnabled())
-        <div class="relative mb-6">
-            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                <div class="w-full border-t border-cream-300"></div>
+        @if (\Fleet\IdpClient\View\Components\SocialLoginButtons::isEnabled())
+            <div class="relative mb-6">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div class="w-full border-t border-cream-300"></div>
+                </div>
+                <div class="relative flex justify-center text-xs uppercase tracking-wide">
+                    <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or with email') }}</span>
+                </div>
             </div>
-            <div class="relative flex justify-center text-xs uppercase tracking-wide">
-                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or with email') }}</span>
-            </div>
-        </div>
+        @endif
     @endif
 
     <form wire:submit="register" class="space-y-4">

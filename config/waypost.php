@@ -44,6 +44,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Fleet Auth login / register surfaces
+    |--------------------------------------------------------------------------
+    |
+    | When false, Waypost hides Fleet OAuth and passwordless cards on login and
+    | register, skips the IdP password grant on login, and omits Fleet account
+    | sections from the profile. Package OAuth routes may still exist; set
+    | WAYPOST_FLEET_LOGIN_ENABLED=true when integrating with Fleet Auth again.
+    |
+    */
+
+    'fleet_login_enabled' => filter_var(
+        env('WAYPOST_FLEET_LOGIN_ENABLED', false),
+        FILTER_VALIDATE_BOOL
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
     | MCP HTTP server (POST /mcp/waypost)
     |--------------------------------------------------------------------------
     |

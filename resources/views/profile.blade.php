@@ -47,7 +47,7 @@
                 </div>
             @endif
 
-            @if (\Fleet\IdpClient\Support\ProfileEmailSignInSettings::showInProfile(auth()->user()))
+            @if (config('waypost.fleet_login_enabled') && \Fleet\IdpClient\Support\ProfileEmailSignInSettings::showInProfile(auth()->user()))
                 <div class="p-4 sm:p-8 bg-cream-50 border border-cream-300/80 shadow-sm sm:rounded-lg ring-1 ring-ink/5">
                     <div class="max-w-xl">
                         <livewire:profile.email-code-sign-in-form />
@@ -55,7 +55,7 @@
                 </div>
             @endif
 
-            @if (\Fleet\IdpClient\Support\ProfileFleetAccountSettings::showInProfile(auth()->user()))
+            @if (config('waypost.fleet_login_enabled') && \Fleet\IdpClient\Support\ProfileFleetAccountSettings::showInProfile(auth()->user()))
                 <div class="p-4 sm:p-8 bg-cream-50 border border-cream-300/80 shadow-sm sm:rounded-lg ring-1 ring-ink/5">
                     <div class="max-w-xl">
                         <livewire:profile.fleet-account-link-form />

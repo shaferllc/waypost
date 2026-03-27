@@ -16,7 +16,7 @@ new #[Layout('layouts.guest')] class extends Component
 
     public function mount(): void
     {
-        if (rtrim((string) config('fleet_idp.url', ''), '/') !== '') {
+        if (config('waypost.fleet_login_enabled') && rtrim((string) config('fleet_idp.url', ''), '/') !== '') {
             FleetSocialLoginPolicy::snapshot();
         }
     }
@@ -33,7 +33,7 @@ new #[Layout('layouts.guest')] class extends Component
         $email = (string) $this->form->email;
         $password = (string) $this->form->password;
 
-        if (FleetIdpPasswordGrant::isConfigured()) {
+        if (config('waypost.fleet_login_enabled') && FleetIdpPasswordGrant::isConfigured()) {
             $user = FleetIdpPasswordGrant::attempt($email, $password);
             if ($user === null) {
                 RateLimiter::hit($this->form->throttleKey());
@@ -106,8 +106,10 @@ new #[Layout('layouts.guest')] class extends Component
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    {{-- Fleet OAuth button, dividers, passwordless card: vendor/shaferllc/fleet-idp-client/.../login-screen-fleet-surfaces.blade.php --}}
-    <x-fleet-idp::login-screen-fleet-surfaces variant="waypost" :wire-navigate="true" />
+    @if (config('waypost.fleet_login_enabled'))
+        {{-- Fleet OAuth button, dividers, passwordless card: vendor/shaferllc/fleet-idp-client/.../login-screen-fleet-surfaces.blade.php --}}
+        <x-fleet-idp::login-screen-fleet-surfaces variant="waypost" :wire-navigate="true" />
+    @endif
 
     <form wire:submit="login" class="space-y-4">
         <div>
@@ -152,6 +154,8 @@ new #[Layout('layouts.guest')] class extends Component
             {{ __('No account yet?') }}
             <a href="{{ route('register') }}" wire:navigate class="font-semibold text-sage-dark hover:text-sage-deeper">{{ __('Create one') }}</a>
         </p>
-        <x-fleet-idp::login-screen-fleet-register-footnotes />
+        @if (config('waypost.fleet_login_enabled'))
+            <x-fleet-idp::login-screen-fleet-register-footnotes />
+        @endif
     @endif
 </div>

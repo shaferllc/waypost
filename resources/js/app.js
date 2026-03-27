@@ -2,8 +2,12 @@ import './bootstrap';
 import Sortable from 'sortablejs';
 
 const kanbanSortables = [];
+const kanbanListAbortControllers = [];
 
 function destroyKanbanSortables() {
+    while (kanbanListAbortControllers.length) {
+        kanbanListAbortControllers.pop().abort();
+    }
     while (kanbanSortables.length) {
         const s = kanbanSortables.pop();
         try {
@@ -27,35 +31,68 @@ function collectKanbanPayload(boardRoot) {
 }
 
 function initKanbanBoard(boardRoot) {
-    if (!boardRoot || boardRoot.dataset.kanbanInit === '0') {
+    if (!boardRoot) {
         return;
     }
 
     destroyKanbanSortables();
 
+    const sortEnabled = boardRoot.dataset.kanbanInit !== '0';
+    const quickAddEnabled = boardRoot.dataset.kanbanQuickAdd === '1';
+
     boardRoot.querySelectorAll('[data-kanban-list]').forEach((listEl) => {
-        const sortable = Sortable.create(listEl, {
-            group: { name: 'kanban', pull: true, put: true },
-            animation: 150,
-            handle: '.kanban-card-handle',
-            draggable: '[data-task-id]',
-            ghostClass: 'opacity-50',
-            chosenClass: 'ring-2 ring-teal-400',
-            dragClass: 'cursor-grabbing',
-            onEnd: () => {
-                const componentEl = boardRoot.closest('[wire\\:id]');
-                if (!componentEl) {
-                    return;
-                }
-                const id = componentEl.getAttribute('wire:id');
-                const comp = window.Livewire.find(id);
-                if (!comp) {
-                    return;
-                }
-                comp.call('syncKanban', collectKanbanPayload(boardRoot));
-            },
-        });
-        kanbanSortables.push(sortable);
+        if (sortEnabled) {
+            const sortable = Sortable.create(listEl, {
+                group: { name: 'kanban', pull: true, put: true },
+                animation: 150,
+                handle: '.kanban-card-handle',
+                draggable: '[data-task-id]',
+                ghostClass: 'opacity-50',
+                chosenClass: 'ring-2 ring-teal-400',
+                dragClass: 'cursor-grabbing',
+                onEnd: () => {
+                    const componentEl = boardRoot.closest('[wire\\:id]');
+                    if (!componentEl) {
+                        return;
+                    }
+                    const id = componentEl.getAttribute('wire:id');
+                    const comp = window.Livewire.find(id);
+                    if (!comp) {
+                        return;
+                    }
+                    comp.call('syncKanban', collectKanbanPayload(boardRoot));
+                },
+            });
+            kanbanSortables.push(sortable);
+        }
+
+        if (quickAddEnabled) {
+            const ac = new AbortController();
+            kanbanListAbortControllers.push(ac);
+            listEl.addEventListener(
+                'dblclick',
+                (e) => {
+                    if (e.target.closest('[data-task-id]')) {
+                        return;
+                    }
+                    const status = listEl.getAttribute('data-kanban-status');
+                    if (!status) {
+                        return;
+                    }
+                    const componentEl = boardRoot.closest('[wire\\:id]');
+                    if (!componentEl) {
+                        return;
+                    }
+                    const id = componentEl.getAttribute('wire:id');
+                    const comp = window.Livewire.find(id);
+                    if (!comp) {
+                        return;
+                    }
+                    comp.call('quickAddKanbanCard', status);
+                },
+                { signal: ac.signal },
+            );
+        }
     });
 }
 

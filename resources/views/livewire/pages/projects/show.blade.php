@@ -490,6 +490,30 @@ class extends Component
         unset($this->project);
     }
 
+    public function quickAddKanbanCard(string $status): void
+    {
+        if (! Gate::allows('update', $this->project)) {
+            return;
+        }
+
+        if (! in_array($status, Task::KANBAN_STATUSES, true)) {
+            return;
+        }
+
+        $max = (int) $this->project->tasks()->where('status', $status)->max('position');
+
+        $task = $this->project->tasks()->create([
+            'title' => 'New card',
+            'body' => null,
+            'status' => $status,
+            'position' => $max + 1,
+            'version_id' => null,
+        ]);
+
+        $this->openTaskDetail($task->id);
+        unset($this->project);
+    }
+
     public function deleteTask(Task $task): void
     {
         $this->assertTaskOnProject($task);
@@ -1687,9 +1711,13 @@ class extends Component
                     </section>
                 @endif
 
+                @php
+                    $kanbanDblClickHint = Gate::allows('update', $this->project) ? 'Double-click to add a card' : '';
+                @endphp
                 <div
                     data-kanban-board
                     data-kanban-init="{{ $this->boardLayout === 'columns' && trim($this->boardSearch) === '' ? '1' : '0' }}"
+                    data-kanban-quick-add="{{ Gate::allows('update', $this->project) ? '1' : '0' }}"
                     class="overflow-x-auto pb-2 -mx-1 px-1 {{ $this->boardLayout === 'list' ? 'hidden' : '' }}"
                 >
                     <div class="flex min-h-[28rem] gap-4" style="min-width: min(100%, 70rem);">
@@ -1706,9 +1734,10 @@ class extends Component
                                     <p class="text-xs text-ink/55">{{ $kanbanHints[$status] }}</p>
                                 </div>
                                 <ul
-                                    class="flex flex-1 flex-col gap-2 p-2"
+                                    class="flex flex-1 flex-col gap-2 p-2 min-h-[5rem]"
                                     data-kanban-list
                                     data-kanban-status="{{ $status }}"
+                                    title="{{ $kanbanDblClickHint }}"
                                 >
                                     @foreach ($colTasks as $task)
                                         <li
