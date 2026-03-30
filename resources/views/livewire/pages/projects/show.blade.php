@@ -1342,7 +1342,6 @@ class extends Component
 @endphp
 
 <div
-    data-echo-project="{{ $projectId }}"
     wire:poll.90s="refreshProjectForPoll"
     class="py-10 px-4 sm:px-6 lg:px-8"
     x-data
@@ -1717,7 +1716,6 @@ class extends Component
                 <div
                     data-kanban-board
                     data-kanban-init="{{ $this->boardLayout === 'columns' && trim($this->boardSearch) === '' ? '1' : '0' }}"
-                    data-kanban-quick-add="{{ Gate::allows('update', $this->project) ? '1' : '0' }}"
                     class="overflow-x-auto pb-2 -mx-1 px-1 {{ $this->boardLayout === 'list' ? 'hidden' : '' }}"
                 >
                     <div class="flex min-h-[28rem] gap-4" style="min-width: min(100%, 70rem);">
@@ -1738,6 +1736,9 @@ class extends Component
                                     data-kanban-list
                                     data-kanban-status="{{ $status }}"
                                     title="{{ $kanbanDblClickHint }}"
+                                    @if (Gate::allows('update', $this->project))
+                                        wire:dblclick="!$event.target.closest('[data-task-id]') && quickAddKanbanCard('{{ $status }}')"
+                                    @endif
                                 >
                                     @foreach ($colTasks as $task)
                                         <li
@@ -1916,7 +1917,7 @@ class extends Component
                     <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                         <div>
                             <h2 class="text-lg font-semibold text-ink">Initiative roadmap</h2>
-                            <p class="mt-1 text-sm text-ink/55">List every card with OKR, planning status, tags, timeline, and dependencies. Set fields on a card’s detail panel. With Reverb running, updates from teammates appear without waiting for a full page refresh.</p>
+                            <p class="mt-1 text-sm text-ink/55">List every card with OKR, planning status, tags, timeline, and dependencies. Set fields on a card’s detail panel. The page refreshes project data periodically so teammate changes show up within a short delay.</p>
                         </div>
                         <div class="inline-flex rounded-lg border border-cream-300 p-0.5 text-xs font-semibold">
                             <button

@@ -2,12 +2,8 @@ import './bootstrap';
 import Sortable from 'sortablejs';
 
 const kanbanSortables = [];
-const kanbanListAbortControllers = [];
 
 function destroyKanbanSortables() {
-    while (kanbanListAbortControllers.length) {
-        kanbanListAbortControllers.pop().abort();
-    }
     while (kanbanSortables.length) {
         const s = kanbanSortables.pop();
         try {
@@ -38,61 +34,33 @@ function initKanbanBoard(boardRoot) {
     destroyKanbanSortables();
 
     const sortEnabled = boardRoot.dataset.kanbanInit !== '0';
-    const quickAddEnabled = boardRoot.dataset.kanbanQuickAdd === '1';
 
     boardRoot.querySelectorAll('[data-kanban-list]').forEach((listEl) => {
-        if (sortEnabled) {
-            const sortable = Sortable.create(listEl, {
-                group: { name: 'kanban', pull: true, put: true },
-                animation: 150,
-                handle: '.kanban-card-handle',
-                draggable: '[data-task-id]',
-                ghostClass: 'opacity-50',
-                chosenClass: 'ring-2 ring-teal-400',
-                dragClass: 'cursor-grabbing',
-                onEnd: () => {
-                    const componentEl = boardRoot.closest('[wire\\:id]');
-                    if (!componentEl) {
-                        return;
-                    }
-                    const id = componentEl.getAttribute('wire:id');
-                    const comp = window.Livewire.find(id);
-                    if (!comp) {
-                        return;
-                    }
-                    comp.call('syncKanban', collectKanbanPayload(boardRoot));
-                },
-            });
-            kanbanSortables.push(sortable);
+        if (!sortEnabled) {
+            return;
         }
-
-        if (quickAddEnabled) {
-            const ac = new AbortController();
-            kanbanListAbortControllers.push(ac);
-            listEl.addEventListener(
-                'dblclick',
-                (e) => {
-                    if (e.target.closest('[data-task-id]')) {
-                        return;
-                    }
-                    const status = listEl.getAttribute('data-kanban-status');
-                    if (!status) {
-                        return;
-                    }
-                    const componentEl = boardRoot.closest('[wire\\:id]');
-                    if (!componentEl) {
-                        return;
-                    }
-                    const id = componentEl.getAttribute('wire:id');
-                    const comp = window.Livewire.find(id);
-                    if (!comp) {
-                        return;
-                    }
-                    comp.call('quickAddKanbanCard', status);
-                },
-                { signal: ac.signal },
-            );
-        }
+        const sortable = Sortable.create(listEl, {
+            group: { name: 'kanban', pull: true, put: true },
+            animation: 150,
+            handle: '.kanban-card-handle',
+            draggable: '[data-task-id]',
+            ghostClass: 'opacity-50',
+            chosenClass: 'ring-2 ring-teal-400',
+            dragClass: 'cursor-grabbing',
+            onEnd: () => {
+                const componentEl = boardRoot.closest('[wire\\:id]');
+                if (!componentEl) {
+                    return;
+                }
+                const id = componentEl.getAttribute('wire:id');
+                const comp = window.Livewire.find(id);
+                if (!comp) {
+                    return;
+                }
+                comp.call('syncKanban', collectKanbanPayload(boardRoot));
+            },
+        });
+        kanbanSortables.push(sortable);
     });
 }
 
@@ -107,19 +75,7 @@ function tryInitKanbanFromNode(el) {
 }
 
 document.addEventListener('livewire:init', () => {
-    Livewire.hook('component.init', ({ component, cleanup }) => {
-        const pid = component.el?.getAttribute?.('data-echo-project');
-        if (pid && window.Echo) {
-            const privateName = `private-project.${pid}`;
-            window.Echo.private(`project.${pid}`).listen('.updated', () => {
-                component.call('refreshProjectForPoll');
-            });
-            cleanup(() => {
-                if (window.Echo) {
-                    window.Echo.leave(privateName);
-                }
-            });
-        }
+    Livewire.hook('component.init', ({ component }) => {
         tryInitKanbanFromNode(component.el);
     });
 

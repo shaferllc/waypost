@@ -15,12 +15,15 @@ use App\Observers\OkrObjectiveObserver;
 use App\Observers\ProjectLinkObserver;
 use App\Observers\TaskObserver;
 use App\Observers\WishlistItemObserver;
+use Closure;
+use Fleet\IdpClient\Http\Middleware\InjectFleetIdpDebugPanel;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
+use Symfony\Component\HttpFoundation\Response;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -50,6 +53,23 @@ class AppServiceProvider extends ServiceProvider
             'fleet_idp.email_sign_in.profile_confirm.interstitial_layout' => 'layouts.guest',
             'fleet_idp.email_sign_in.mutually_exclusive_code_and_magic' => true,
         ]);
+
+        if (! config('waypost.fleet_login_enabled')) {
+            config([
+                'fleet_idp.socialite.debug_panel' => false,
+                'fleet_idp.socialite.debug_policy_fetch' => false,
+            ]);
+
+            $this->app->bind(InjectFleetIdpDebugPanel::class, function () {
+                return new class
+                {
+                    public function handle(Request $request, Closure $next): Response
+                    {
+                        return $next($request);
+                    }
+                };
+            });
+        }
 
         if (! $this->app->environment('local', 'testing')) {
             URL::forceScheme('https');

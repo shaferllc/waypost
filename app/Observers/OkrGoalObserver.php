@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Events\ProjectDataUpdated;
 use App\Models\OkrGoal;
 use App\Services\ProjectActivityRecorder;
 
@@ -12,7 +11,6 @@ class OkrGoalObserver
 
     public function created(OkrGoal $goal): void
     {
-        broadcast(new ProjectDataUpdated($goal->project_id));
         $this->activity->record(auth()->user(), $goal->project_id, 'okr.goal.created', 'okr_goal', $goal->id, [
             'title' => $goal->title,
         ]);
@@ -20,7 +18,6 @@ class OkrGoalObserver
 
     public function updated(OkrGoal $goal): void
     {
-        broadcast(new ProjectDataUpdated($goal->project_id));
         if ($goal->wasChanged('title')) {
             $this->activity->record(auth()->user(), $goal->project_id, 'okr.goal.updated', 'okr_goal', $goal->id, [
                 'title' => $goal->title,
@@ -30,7 +27,6 @@ class OkrGoalObserver
 
     public function deleted(OkrGoal $goal): void
     {
-        broadcast(new ProjectDataUpdated($goal->project_id));
         $this->activity->record(auth()->user(), $goal->project_id, 'okr.goal.deleted', 'okr_goal', $goal->id, [
             'title' => $goal->title,
         ]);

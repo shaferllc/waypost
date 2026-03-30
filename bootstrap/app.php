@@ -9,6 +9,7 @@ use Dply\FleetOperator\Http\Middleware\AuthenticateFleetOperator;
 use Fleet\IdpClient\Http\Middleware\EnsureFleetSiteRequiresTwoFactor;
 use Fleet\IdpClient\Http\Middleware\EnsureSatelliteEmailIsVerified;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Middleware\EnsureEmailIsVerified as LaravelEnsureEmailIsVerified;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,7 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -36,16 +36,26 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         // Middleware::alias() replaces the whole map — register every alias in one call (do not call
         // FleetSatelliteWebMiddleware::register() after this or token.project / fleet.operator are lost).
+        // Config is not bound yet here; keep in sync with config/waypost.php fleet_login_enabled.
+        $fleetLogin = filter_var(
+            env('WAYPOST_FLEET_LOGIN_ENABLED', false),
+            FILTER_VALIDATE_BOOL
+        );
+
         $middleware->alias([
             'token.project' => EnforceProjectScopedSanctumToken::class,
             'fleet.operator' => AuthenticateFleetOperator::class,
             'two_factor.challenge' => EnsureTwoFactorChallengeSession::class,
-            'verified' => EnsureSatelliteEmailIsVerified::class,
+            'verified' => $fleetLogin
+                ? EnsureSatelliteEmailIsVerified::class
+                : LaravelEnsureEmailIsVerified::class,
         ]);
 
-        $middleware->appendToGroup('web', [
-            EnsureFleetSiteRequiresTwoFactor::class,
-        ]);
+        if ($fleetLogin) {
+            $middleware->appendToGroup('web', [
+                EnsureFleetSiteRequiresTwoFactor::class,
+            ]);
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (AuthenticationException $e, Request $request) {

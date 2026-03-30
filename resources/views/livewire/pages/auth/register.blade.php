@@ -31,7 +31,9 @@ new #[Layout('layouts.guest')] class extends Component
         ]);
 
         $plainPassword = $validated['password'];
-        FleetProvisioningRequest::stashPasswordForRegisteredEvent($plainPassword);
+        if (config('waypost.fleet_login_enabled')) {
+            FleetProvisioningRequest::stashPasswordForRegisteredEvent($plainPassword);
+        }
         $validated['password'] = Hash::make($plainPassword);
 
         $user = User::create($validated);

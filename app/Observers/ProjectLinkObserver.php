@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Events\ProjectDataUpdated;
 use App\Models\ProjectLink;
 use App\Services\ProjectActivityRecorder;
 
@@ -12,7 +11,6 @@ class ProjectLinkObserver
 
     public function created(ProjectLink $link): void
     {
-        broadcast(new ProjectDataUpdated($link->project_id));
         $this->maybeRecord($link, 'project_link.created', [
             'title' => $link->title,
             'url' => $link->url,
@@ -21,7 +19,6 @@ class ProjectLinkObserver
 
     public function deleted(ProjectLink $link): void
     {
-        broadcast(new ProjectDataUpdated($link->project_id));
         $this->maybeRecord($link, 'project_link.deleted', [
             'title' => $link->title,
             'url' => $link->url,

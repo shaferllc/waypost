@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Events\ProjectDataUpdated;
 use App\Models\OkrGoal;
 use App\Models\OkrKeyResult;
 use App\Models\OkrObjective;
@@ -10,11 +9,10 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-class OkrPlanningAndBroadcastTest extends TestCase
+class OkrPlanningTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -98,30 +96,6 @@ class OkrPlanningAndBroadcastTest extends TestCase
         $this->assertSame('2026-03-01', $task->starts_at->format('Y-m-d'));
         $this->assertSame('2026-04-15', $task->ends_at->format('Y-m-d'));
         $this->assertSame(Task::PLANNING_IN_PROGRESS, $task->planning_status);
-    }
-
-    public function test_task_save_dispatches_project_data_updated_event(): void
-    {
-        Event::fake([ProjectDataUpdated::class]);
-
-        $user = User::factory()->create();
-        $project = Project::query()->create([
-            'user_id' => $user->id,
-            'name' => 'Broadcast',
-        ]);
-
-        $this->actingAs($user);
-
-        Task::query()->create([
-            'project_id' => $project->id,
-            'title' => 'Card',
-            'status' => 'backlog',
-            'position' => 0,
-        ]);
-
-        Event::assertDispatched(ProjectDataUpdated::class, function (ProjectDataUpdated $e) use ($project): bool {
-            return $e->projectId === $project->id;
-        });
     }
 
     public function test_task_update_writes_project_activity_for_authenticated_user(): void

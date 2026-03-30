@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Events\ProjectDataUpdated;
 use App\Models\WishlistItem;
 use App\Services\ProjectActivityRecorder;
 
@@ -12,7 +11,6 @@ class WishlistItemObserver
 
     public function created(WishlistItem $item): void
     {
-        broadcast(new ProjectDataUpdated($item->project_id));
         $this->maybeRecord($item, 'wishlist_item.created', [
             'title' => $item->title,
         ]);
@@ -20,7 +18,6 @@ class WishlistItemObserver
 
     public function deleted(WishlistItem $item): void
     {
-        broadcast(new ProjectDataUpdated($item->project_id));
         $this->maybeRecord($item, 'wishlist_item.deleted', [
             'title' => $item->title,
         ]);

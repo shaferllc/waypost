@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Events\ProjectDataUpdated;
 use App\Models\Task;
 use App\Services\ChangelogRecorder;
 use App\Services\ProjectActivityRecorder;
@@ -14,7 +13,6 @@ class TaskObserver
 
     public function created(Task $task): void
     {
-        broadcast(new ProjectDataUpdated($task->project_id));
         $this->recordActivity($task, 'task.created', [
             'title' => $task->title,
             'status' => $task->status,
@@ -37,8 +35,6 @@ class TaskObserver
         $isKanbanOnly = count($changes) === 2
             && array_key_exists('position', $changes)
             && array_key_exists('status', $changes);
-
-        broadcast(new ProjectDataUpdated($task->project_id));
 
         if ($isKanbanOnly) {
             $this->recordActivity($task, 'task.moved', [
@@ -75,7 +71,6 @@ class TaskObserver
 
     public function deleted(Task $task): void
     {
-        broadcast(new ProjectDataUpdated($task->project_id));
         $this->recordActivity($task, 'task.deleted', [
             'title' => $task->title,
         ]);
