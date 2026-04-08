@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\PersonalAccessToken;
 use App\Models\Project;
+use App\Support\WaypostMcpInternalApi;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,6 +26,9 @@ class EnforceProjectScopedSanctumToken
 
         $routeProject = $request->route('project');
         if ($routeProject instanceof Project && (int) $routeProject->id !== $scopedProjectId) {
+            if (WaypostMcpInternalApi::isInternalDispatch() && $request->user()->can('view', $routeProject)) {
+                return $next($request);
+            }
             abort(403, 'This API token is limited to a different project.');
         }
 

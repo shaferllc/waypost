@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Http\Middleware\EnforceProjectScopedSanctumToken;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,6 +9,17 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 final class WaypostMcpInternalApi
 {
+    /**
+     * Container key: true while handling an API subrequest from MCP tools (not forgeable by HTTP clients).
+     */
+    public const INTERNAL_DISPATCH_BINDING = 'waypost.mcp_internal_api_dispatch';
+
+    public static function isInternalDispatch(): bool
+    {
+        return app()->bound(self::INTERNAL_DISPATCH_BINDING)
+            && app(self::INTERNAL_DISPATCH_BINDING) === true;
+    }
+
     /**
      * Dispatch a subrequest to this app's `/api` routes using the same Bearer token as the MCP request.
      *
@@ -26,8 +36,7 @@ final class WaypostMcpInternalApi
             throw new \RuntimeException('Not authenticated.');
         }
 
-        $scoped = EnforceProjectScopedSanctumToken::scopedProjectIdFromToken($user->currentAccessToken());
-        WaypostMcpApiPath::assertPathMatchesTokenScope($scoped, $path);
+        WaypostMcpApiPath::assertUserMayAccessProjectsInApiPath($user, $path);
 
         $uri = '/api'.$path;
         if ($query !== []) {
@@ -55,7 +64,13 @@ final class WaypostMcpInternalApi
         $sub = Request::create($uri, $method, [], [], [], $server, $content);
 
         $kernel = app(Kernel::class);
-        $response = $kernel->handle($sub);
+
+        app()->instance(self::INTERNAL_DISPATCH_BINDING, true);
+        try {
+            $response = $kernel->handle($sub);
+        } finally {
+            app()->forgetInstance(self::INTERNAL_DISPATCH_BINDING);
+        }
 
         // Do not call Kernel::terminate() for nested requests: terminateMiddleware()
         // resolves route middleware by container make(name) and breaks on aliases like token.project.

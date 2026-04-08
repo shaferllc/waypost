@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\Project;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 
 final class WaypostMcpApiPath
@@ -52,6 +55,28 @@ final class WaypostMcpApiPath
                         "This token is limited to project {$scopedProjectId} only.",
                     );
                 }
+            }
+        }
+    }
+
+    /**
+     * MCP internal API dispatch: every /projects/{id} in the path must be a project the user can view.
+     *
+     * @throws InvalidArgumentException
+     */
+    public static function assertUserMayAccessProjectsInApiPath(Authenticatable $user, string $path): void
+    {
+        if (! preg_match_all('#/projects/(\d+)#', $path, $matches)) {
+            return;
+        }
+
+        foreach ($matches[1] as $found) {
+            $projectId = (int) $found;
+            $project = Project::query()->find($projectId);
+            if ($project === null || Gate::forUser($user)->denies('view', $project)) {
+                throw new InvalidArgumentException(
+                    "You do not have access to project {$projectId} for this MCP request.",
+                );
             }
         }
     }

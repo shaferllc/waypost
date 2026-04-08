@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\LogWaypostMcpHttp;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
 use App\Services\ProjectCursorTokenIssuer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -171,6 +172,181 @@ class WaypostMcpHttpTest extends TestCase
         $second->assertJsonMissing(['error']);
         $second->assertJsonPath('id', 2);
         $this->assertStringContainsString('MCP Alpha', $second->getContent());
+    }
+
+    public function test_mcp_tool_waypost_list_projects_works_with_profile_token(): void
+    {
+        $user = User::factory()->create();
+        Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'From MCP list',
+        ]);
+
+        $plain = $user->createToken('mcp-test')->plainTextToken;
+
+        $init = [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'initialize',
+            'params' => [
+                'protocolVersion' => '2025-06-18',
+                'capabilities' => new \stdClass,
+                'clientInfo' => ['name' => 'phpunit', 'version' => '1.0'],
+            ],
+        ];
+
+        $first = $this->withToken($plain)->postJson('/mcp/waypost', $init);
+        $first->assertOk();
+        $session = $first->headers->get('MCP-Session-Id');
+        $this->assertNotNull($session);
+
+        $call = [
+            'jsonrpc' => '2.0',
+            'id' => 2,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'waypost_list_projects',
+                'arguments' => new \stdClass,
+            ],
+        ];
+
+        $second = $this->withToken($plain)
+            ->withHeader('MCP-Session-Id', $session)
+            ->postJson('/mcp/waypost', $call);
+
+        $second->assertOk();
+        $second->assertJsonMissing(['error']);
+        $this->assertStringContainsString('From MCP list', $second->getContent());
+    }
+
+    public function test_mcp_tool_create_project_succeeds_with_project_scoped_token(): void
+    {
+        $user = User::factory()->create();
+        $home = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Scoped home',
+        ]);
+
+        $plain = app(ProjectCursorTokenIssuer::class)->issue($home, $user);
+
+        $init = [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'initialize',
+            'params' => [
+                'protocolVersion' => '2025-06-18',
+                'capabilities' => new \stdClass,
+                'clientInfo' => ['name' => 'phpunit', 'version' => '1.0'],
+            ],
+        ];
+
+        $first = $this->withToken($plain)->postJson('/mcp/waypost', $init);
+        $first->assertOk();
+        $session = $first->headers->get('MCP-Session-Id');
+        $this->assertNotNull($session);
+
+        $call = [
+            'jsonrpc' => '2.0',
+            'id' => 2,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'waypost_create_project',
+                'arguments' => [
+                    'name' => 'Created via MCP',
+                    'description' => 'Project token',
+                ],
+            ],
+        ];
+
+        $second = $this->withToken($plain)
+            ->withHeader('MCP-Session-Id', $session)
+            ->postJson('/mcp/waypost', $call);
+
+        $second->assertOk();
+        $second->assertJsonMissing(['error']);
+        $this->assertStringContainsString('Created via MCP', $second->getContent());
+
+        $this->assertDatabaseHas('projects', [
+            'user_id' => $user->id,
+            'name' => 'Created via MCP',
+        ]);
+    }
+
+    public function test_mcp_create_project_then_create_task_without_project_id_uses_default(): void
+    {
+        $user = User::factory()->create();
+        $home = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Scoped home for default',
+        ]);
+
+        $plain = app(ProjectCursorTokenIssuer::class)->issue($home, $user);
+
+        $init = [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'initialize',
+            'params' => [
+                'protocolVersion' => '2025-06-18',
+                'capabilities' => new \stdClass,
+                'clientInfo' => ['name' => 'phpunit', 'version' => '1.0'],
+            ],
+        ];
+
+        $first = $this->withToken($plain)->postJson('/mcp/waypost', $init);
+        $first->assertOk();
+        $session = $first->headers->get('MCP-Session-Id');
+        $this->assertNotNull($session);
+
+        $createProject = [
+            'jsonrpc' => '2.0',
+            'id' => 2,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'waypost_create_project',
+                'arguments' => [
+                    'name' => 'MCP default target project',
+                ],
+            ],
+        ];
+
+        $pRes = $this->withToken($plain)
+            ->withHeader('MCP-Session-Id', $session)
+            ->postJson('/mcp/waypost', $createProject);
+
+        $pRes->assertOk();
+        $pRes->assertJsonMissing(['error']);
+        $this->assertStringContainsString('MCP default target project', $pRes->getContent());
+
+        $newProject = Project::query()->where('name', 'MCP default target project')->first();
+        $this->assertNotNull($newProject);
+
+        $createTask = [
+            'jsonrpc' => '2.0',
+            'id' => 3,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'waypost_create_task',
+                'arguments' => [
+                    'title' => 'Task without explicit project_id',
+                ],
+            ],
+        ];
+
+        $tRes = $this->withToken($plain)
+            ->withHeader('MCP-Session-Id', $session)
+            ->postJson('/mcp/waypost', $createTask);
+
+        $tRes->assertOk();
+        $tRes->assertJsonMissing(['error']);
+        $this->assertStringContainsString('Task without explicit project_id', $tRes->getContent());
+
+        $this->assertTrue(
+            Task::query()
+                ->where('project_id', $newProject->id)
+                ->where('title', 'Task without explicit project_id')
+                ->exists()
+        );
     }
 
     public function test_mcp_logs_channel_adds_request_id_header_when_waypost_mcp_log_requests_enabled(): void
