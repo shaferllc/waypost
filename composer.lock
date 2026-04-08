@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0676f4ff06d9d30d6d7e68630314b0f0",
+    "content-hash": "8533f24b45f5d18120ed70900e29ecc1",
     "packages": [
         {
             "name": "blade-ui-kit/blade-heroicons",
@@ -4751,10 +4751,16 @@
         {
             "name": "shaferllc/fleet-idp-client",
             "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/shaferllc/fleet-idp-client.git",
+                "reference": "5bf432bc2b950557847b9b415df46e597ab055d3"
+            },
             "dist": {
-                "type": "path",
-                "url": "../fleet-idp-client",
-                "reference": "e651dabe0df1aeba92eedfa954d518345f65dbce"
+                "type": "zip",
+                "url": "https://api.github.com/repos/shaferllc/fleet-idp-client/zipball/5bf432bc2b950557847b9b415df46e597ab055d3",
+                "reference": "5bf432bc2b950557847b9b415df46e597ab055d3",
+                "shasum": ""
             },
             "require": {
                 "illuminate/auth": "^12.0|^13.0",
@@ -4769,6 +4775,7 @@
                 "laravel/socialite": "^5.0",
                 "php": "^8.3"
             },
+            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -4786,10 +4793,11 @@
                 "MIT"
             ],
             "description": "Laravel client for Fleet central auth: Passport OAuth, optional password grant, Eloquent user sync, fleet:idp:configure CLI.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "source": "https://github.com/shaferllc/fleet-idp-client/tree/v0.9.26",
+                "issues": "https://github.com/shaferllc/fleet-idp-client/issues"
+            },
+            "time": "2026-03-26T19:59:26+00:00"
         },
         {
             "name": "spiral/core",

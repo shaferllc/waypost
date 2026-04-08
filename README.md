@@ -73,20 +73,11 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 Fleet login uses **`shaferllc/fleet-idp-client`** from **[Packagist](https://packagist.org/packages/shaferllc/fleet-idp-client)** (the **`fleet`** vendor name is taken on Packagist.org, so the package is not named `fleet/idp-client`).
 
-1. Run **`composer install --no-dev --optimize-autoloader`** on the server; **`composer.lock`** pins the version. No private Composer registry or HTTP-basic auth is required for this package once it is on Packagist.
-2. **`composer.json`** lists a **`path`** repository for **`../fleet-idp-client`** first (symlinked local package). On hosts **without** that sibling folder, remove that repository block (keep the VCS entry) and run **`composer update shaferllc/fleet-idp-client`** so the lock uses **dist/git** again. The fallback VCS URL is **GitHub `main`** (`dev-main as 0.9.99`) until **v0.9+** tags exist on [Packagist](https://packagist.org/packages/shaferllc/fleet-idp-client).
-3. Optional: after first deploy, run **`php artisan fleet:idp:configure`** if Fleet Auth exposes **`FLEET_AUTH_CLI_SETUP_TOKEN`** — see the [package README](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md#cli-bootstrap-fleetidpconfigure).
-4. Optional: publish themed package assets once per app — **`php artisan fleet:idp:install`** (views under **`resources/views/vendor/fleet-idp/`**, lang, account layout stub).
+1. Run **`composer install --no-dev --optimize-autoloader`** on the server; **`composer.lock`** pins the version. The app declares a **VCS** repository for **`shaferllc/fleet-idp-client`** so **`dev-main as 0.9.99`** resolves from **GitHub** (zip/dist with `preferred-install: dist`).
+2. Optional: after first deploy, run **`php artisan fleet:idp:configure`** if Fleet Auth exposes **`FLEET_AUTH_CLI_SETUP_TOKEN`** — see the [package README](https://github.com/shaferllc/fleet-idp-client/blob/main/README.md#cli-bootstrap-fleetidpconfigure).
+3. Optional: publish themed package assets once per app — **`php artisan fleet:idp:install`** (views under **`resources/views/vendor/fleet-idp/`**, lang, account layout stub).
 
-**Local development** with **`fleet-idp-client`** next to this repo (`Apps/fleet-idp-client` + `Apps/waypost`): the path repository is already in **`composer.json`**. Run **`composer update shaferllc/fleet-idp-client`** once; **`vendor/shaferllc/fleet-idp-client`** becomes a symlink. The package **`composer.json`** uses **`"version": "dev-main"`** so it satisfies **`dev-main as 0.9.99`**.
-
-### Troubleshooting: `Source path "../fleet-idp-client" is not found`
-
-That means **`composer.lock`** still records **`shaferllc/fleet-idp-client`** as a **path** install (or your environment merged in a path repository). Fix:
-
-1. From the app root run **`composer update shaferllc/fleet-idp-client`** and **commit the updated `composer.lock`** so CI/deploy matches `composer.json`.
-2. If you added a path repo locally: **`composer config --unset repositories.fleet-idp-client`** (or whatever name you used), then update again.
-3. Check global config: **`composer config --global --list`** and remove any **`repositories.*`** entry pointing at **`../fleet-idp-client`**.
+**Local development** against a **checkout** of `fleet-idp-client` next to this repo: add a **`path`** repository in **`composer.json`** pointing at **`../fleet-idp-client`**, run **`composer update shaferllc/fleet-idp-client`**, then remove the path entry and run **`composer update shaferllc/fleet-idp-client`** again before committing **`composer.lock`** so CI and other machines do not depend on that folder.
 
 ### Troubleshooting: `git@github.com: Permission denied (publickey)`
 
