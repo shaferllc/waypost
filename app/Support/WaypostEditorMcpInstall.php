@@ -18,9 +18,10 @@ final class WaypostEditorMcpInstall
      */
     public static function vscodeInstallPayload(Project $project): array
     {
+        // VS Code expects type "http" for remote Streamable HTTP; Cursor uses "streamableHttp" in mcpServerConfig().
         return array_merge(
+            WaypostCursorArtifacts::mcpServerConfig(),
             ['name' => 'waypost', 'type' => 'http'],
-            WaypostCursorArtifacts::mcpServerConfig($project),
         );
     }
 
@@ -41,8 +42,8 @@ final class WaypostEditorMcpInstall
     public static function vscodeMcpJsonSnippet(Project $project): string
     {
         $server = array_merge(
+            WaypostCursorArtifacts::mcpServerConfig(),
             ['type' => 'http'],
-            WaypostCursorArtifacts::mcpServerConfig($project),
         );
 
         return json_encode([

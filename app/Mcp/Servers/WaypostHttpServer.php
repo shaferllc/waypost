@@ -31,7 +31,7 @@ Waypost MCP connects this assistant to your Waypost account over HTTPS (no local
 
 **Low-level:** `waypost_http_request` — raw GET/POST/PATCH/DELETE under `/api` with `path` (e.g. `/projects/12/tasks`), optional `query`, optional `json_body`.
 
-Set `WAYPOST_API_TOKEN` in the editor environment for MCP Authorization; do not commit tokens.
+Set `WAYPOST_API_TOKEN` in the editor environment for MCP Authorization; do not commit tokens. In **Cursor**, the MCP server entry must use **type `streamableHttp`** (included in Sync / install deeplinks); omitting it can make Cursor attempt OAuth registration against `/register` and break the connection.
 
 **Monorepo / multiple products:** Prefer **`waypost_set_active_project`** or create-with-followup so omitted `project_id` targets the right backlog. For long-lived multi-repo setups, a **Profile API token** avoids per-repo token churn.
 MARKDOWN;

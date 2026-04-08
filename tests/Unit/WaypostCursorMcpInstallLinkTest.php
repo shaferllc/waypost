@@ -22,7 +22,7 @@ class WaypostCursorMcpInstallLinkTest extends TestCase
 
         config(['app.url' => 'https://waypost.example.test']);
 
-        $url = WaypostCursorArtifacts::cursorMcpInstallUrl($project);
+        $url = WaypostCursorArtifacts::cursorMcpInstallUrl();
 
         $this->assertStringStartsWith('cursor://anysphere.cursor-deeplink/mcp/install?', $url);
 
@@ -34,7 +34,8 @@ class WaypostCursorMcpInstallLinkTest extends TestCase
 
         $decoded = json_decode(base64_decode($params['config'], true), true);
         $this->assertIsArray($decoded);
-        $this->assertSame(WaypostCursorArtifacts::mcpServerConfig($project), $decoded);
+        $this->assertSame('streamableHttp', $decoded['type'] ?? null);
+        $this->assertSame(WaypostCursorArtifacts::mcpServerConfig(), $decoded);
     }
 
     public function test_cursor_install_url_can_embed_bearer_token_in_config(): void
@@ -48,7 +49,7 @@ class WaypostCursorMcpInstallLinkTest extends TestCase
         config(['app.url' => 'https://waypost.example.test']);
 
         $plain = 'test-plain-token-abc';
-        $url = WaypostCursorArtifacts::cursorMcpInstallUrl($project, $plain);
+        $url = WaypostCursorArtifacts::cursorMcpInstallUrl($plain);
 
         $query = parse_url($url, PHP_URL_QUERY);
         $this->assertIsString($query);
@@ -69,7 +70,7 @@ class WaypostCursorMcpInstallLinkTest extends TestCase
 
         config(['app.url' => 'https://app.test']);
 
-        $snippet = json_decode(WaypostCursorArtifacts::mcpServersSnippetJson($project), true);
-        $this->assertSame(['waypost' => WaypostCursorArtifacts::mcpServerConfig($project)], $snippet['mcpServers'] ?? null);
+        $snippet = json_decode(WaypostCursorArtifacts::mcpServersSnippetJson(), true);
+        $this->assertSame(['waypost' => WaypostCursorArtifacts::mcpServerConfig()], $snippet['mcpServers'] ?? null);
     }
 }

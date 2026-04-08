@@ -59,8 +59,11 @@ class WaypostEditorMcpInstallTest extends TestCase
         $parsed = json_decode(WaypostEditorMcpInstall::vscodeMcpJsonSnippet($project), true);
         $this->assertIsArray($parsed);
         $this->assertArrayHasKey('servers', $parsed);
-        $this->assertSame('http', $parsed['servers']['waypost']['type'] ?? null);
-        $this->assertSame(WaypostCursorArtifacts::mcpServerConfig($project), array_diff_key($parsed['servers']['waypost'], ['type' => true]));
+        $w = $parsed['servers']['waypost'];
+        $this->assertSame('http', $w['type'] ?? null);
+        $cfg = WaypostCursorArtifacts::mcpServerConfig();
+        $this->assertSame($cfg['url'], $w['url'] ?? null);
+        $this->assertSame($cfg['headers'], $w['headers'] ?? null);
     }
 
     public function test_mcp_server_config_uses_https_mcp_endpoint(): void
@@ -73,7 +76,8 @@ class WaypostEditorMcpInstallTest extends TestCase
 
         config(['app.url' => 'https://app.test']);
 
-        $cfg = WaypostCursorArtifacts::mcpServerConfig($project);
+        $cfg = WaypostCursorArtifacts::mcpServerConfig();
+        $this->assertSame('streamableHttp', $cfg['type'] ?? null);
         $this->assertSame('https://app.test/mcp/waypost', $cfg['url']);
         $this->assertArrayHasKey('headers', $cfg);
         $this->assertStringContainsString('WAYPOST_API_TOKEN', (string) ($cfg['headers']['Authorization'] ?? ''));

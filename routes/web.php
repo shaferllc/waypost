@@ -8,7 +8,33 @@ use App\Http\Controllers\TaskAttachmentDownloadController;
 use App\Http\Controllers\WaypostAgentRuleController;
 use App\Http\Controllers\WaypostCursorSetupController;
 use App\Http\Controllers\WaypostManifestController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+/*
+| Cursor / MCP OAuth misdiscovery: JSON-RPC MCP uses POST /mcp/waypost with a Sanctum bearer token.
+| If the editor omits server type "streamableHttp", some builds try RFC 7591 dynamic registration
+| against "/register" (same path as the Livewire signup page, GET-only) → HTTP 405 and broken MCP.
+| Respond with a machine-readable OAuth-style error when the body looks like client registration.
+*/
+Route::post('register', static function (Request $request) {
+    if (
+        $request->isJson()
+        && is_array($request->input('redirect_uris'))
+        && $request->input('redirect_uris') !== []
+    ) {
+        return response()->json([
+            'error' => 'access_denied',
+            'error_description' => 'Waypost MCP does not use OAuth dynamic client registration. '
+                .'Configure the server as Streamable HTTP (type streamableHttp) with URL '
+                .url('/mcp/waypost').' and Header Authorization: Bearer <Sanctum API token> (profile or project Sync token).',
+        ], 400);
+    }
+
+    return response()->json([
+        'message' => 'The POST method is not supported for route register.',
+    ], 405);
+})->middleware('throttle:60,1');
 
 Route::view('/', 'welcome');
 

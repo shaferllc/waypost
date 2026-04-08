@@ -33,17 +33,20 @@ final class WaypostCursorArtifacts
      *
      * Uses the app-hosted Streamable HTTP MCP endpoint. Without {@see $embedBearerPlaintext}, the Authorization
      * header uses {@see self::mcpAuthorizationHeaderEnvPlaceholder()} so editors read `WAYPOST_API_TOKEN` from env.
-     * Pass the project token when generating a one-click Cursor install link.
+     * Pass a plaintext token when generating a one-click install link (optional).
      *
-     * @return array{url: string, headers: array<string, string>}
+     * @return array{type: string, url: string, headers: array<string, string>}
      */
-    public static function mcpServerConfig(Project $project, ?string $embedBearerPlaintext = null): array
+    public static function mcpServerConfig(?string $embedBearerPlaintext = null): array
     {
         $authorization = (is_string($embedBearerPlaintext) && $embedBearerPlaintext !== '')
             ? 'Bearer '.$embedBearerPlaintext
             : self::mcpAuthorizationHeaderEnvPlaceholder();
 
         return [
+            // Required for Cursor 0.46+ / Streamable HTTP: without this, the client may assume OAuth
+            // and POST dynamic-client registration to /register (conflicts with the web signup route).
+            'type' => 'streamableHttp',
             'url' => self::mcpHttpUrl(),
             'headers' => [
                 'Authorization' => $authorization,
@@ -98,11 +101,11 @@ final class WaypostCursorArtifacts
     /**
      * Pretty-printed JSON for merging into Cursor MCP settings (mcpServers.waypost).
      */
-    public static function mcpServersSnippetJson(Project $project): string
+    public static function mcpServersSnippetJson(): string
     {
         return json_encode([
             'mcpServers' => [
-                'waypost' => self::mcpServerConfig($project),
+                'waypost' => self::mcpServerConfig(),
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
@@ -112,9 +115,9 @@ final class WaypostCursorArtifacts
      *
      * @see https://cursor.com/docs/context/mcp/install-links
      */
-    public static function cursorMcpInstallUrl(Project $project, ?string $embedBearerPlaintext = null): string
+    public static function cursorMcpInstallUrl(?string $embedBearerPlaintext = null): string
     {
-        $json = json_encode(self::mcpServerConfig($project, $embedBearerPlaintext), JSON_UNESCAPED_SLASHES);
+        $json = json_encode(self::mcpServerConfig($embedBearerPlaintext), JSON_UNESCAPED_SLASHES);
         if ($json === false) {
             throw new \RuntimeException('Failed to encode MCP config for Cursor install link');
         }
@@ -209,6 +212,27 @@ final class WaypostCursorArtifacts
         );
     }
 
+    public static function orchestrationRuleMdcBody(Project $project): string
+    {
+        $stubPath = resource_path('cursor-rules/waypost-agent-orchestration.mdc.stub');
+        if (! is_readable($stubPath)) {
+            throw new \RuntimeException('Orchestration rule template missing');
+        }
+
+        $stub = file_get_contents($stubPath);
+        if ($stub === false) {
+            throw new \RuntimeException('Orchestration rule template unreadable');
+        }
+
+        $name = str_replace(["\r", "\n"], ' ', $project->name);
+
+        return str_replace(
+            ['__PROJECT_ID__', '__PROJECT_NAME__', '__API_BASE__'],
+            [(string) $project->id, $name, self::publicBaseUrl()],
+            $stub,
+        );
+    }
+
     public static function bundleReadme(Project $project): string
     {
         $base = self::publicBaseUrl();
@@ -222,6 +246,7 @@ Waypost + Cursor — quick setup
    You should get:
    - waypost.json
    - .cursor/rules/waypost-agent-activity.mdc
+   - .cursor/rules/waypost-agent-orchestration.mdc
    - this file (WAYPOST-CURSOR-README.txt)
 
 2. MCP is served over HTTPS from this Waypost app (see mcp_url in waypost.json). No npm or local
