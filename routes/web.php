@@ -8,6 +8,7 @@ use App\Http\Controllers\TaskAttachmentDownloadController;
 use App\Http\Controllers\WaypostAgentRuleController;
 use App\Http\Controllers\WaypostCursorSetupController;
 use App\Http\Controllers\WaypostManifestController;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -34,7 +35,7 @@ Route::post('register', static function (Request $request) {
     return response()->json([
         'message' => 'The POST method is not supported for route register.',
     ], 405);
-})->middleware('throttle:60,1');
+})->middleware('throttle:60,1')->withoutMiddleware([PreventRequestForgery::class]);
 
 Route::view('/', 'welcome');
 

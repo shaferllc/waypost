@@ -8,7 +8,6 @@
 .phpactor.json
 .phpunit.result.cache
 /.fleet
-.fleet-idp-client-path
 /.idea
 /.nova
 /.phpunit.cache

@@ -80,8 +80,6 @@ Fleet login uses **`shaferllc/fleet-idp-client`** from **[Packagist](https://pac
 
 **Local development** with **`fleet-idp-client`** next to this repo (`Apps/fleet-idp-client` + `Apps/waypost`): the path repository is already in **`composer.json`**. Run **`composer update shaferllc/fleet-idp-client`** once; **`vendor/shaferllc/fleet-idp-client`** becomes a symlink. The package **`composer.json`** uses **`"version": "dev-main"`** so it satisfies **`dev-main as 0.9.99`**.
 
-If **`composer.lock`** records a **path** install, **`composer install`** expects either an empty **`.fleet-idp-client-path`** file in the app root (gitignored) or **`ALLOW_FLEET_IDP_CLIENT_PATH=1`**. Without those, the pre-install script reminds you to switch back to a dist lock before CI/deploy.
-
 ### Troubleshooting: `Source path "../fleet-idp-client" is not found`
 
 That means **`composer.lock`** still records **`shaferllc/fleet-idp-client`** as a **path** install (or your environment merged in a path repository). Fix:
@@ -89,8 +87,6 @@ That means **`composer.lock`** still records **`shaferllc/fleet-idp-client`** as
 1. From the app root run **`composer update shaferllc/fleet-idp-client`** and **commit the updated `composer.lock`** so CI/deploy matches `composer.json`.
 2. If you added a path repo locally: **`composer config --unset repositories.fleet-idp-client`** (or whatever name you used), then update again.
 3. Check global config: **`composer config --global --list`** and remove any **`repositories.*`** entry pointing at **`../fleet-idp-client`**.
-
-This repo runs **`@check-fleet-idp-lock`** on **`composer install`** so an accidental path-based lock fails CI unless you opt in with **`.fleet-idp-client-path`** or **`ALLOW_FLEET_IDP_CLIENT_PATH`**.
 
 ### Troubleshooting: `git@github.com: Permission denied (publickey)`
 

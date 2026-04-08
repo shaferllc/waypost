@@ -79,10 +79,6 @@
             "@php artisan config:clear --ansi",
             "@php artisan test"
         ],
-        "check-fleet-idp-lock": "@php scripts/ensure-fleet-idp-client-not-path.php",
-        "pre-install-cmd": [
-            "@check-fleet-idp-lock"
-        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
