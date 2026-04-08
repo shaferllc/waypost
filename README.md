@@ -7,6 +7,18 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Waypost (this application)
+
+Waypost is a small, free project workspace: **projects**, **Kanban tasks**, **roadmap versions and themes**, **OKRs**, **wishlist**, **links**, optional **editor sync (MCP)**, and a **read-only public roadmap** URL you can share. There is no billing or team tiering—see the marketing copy on `/` for positioning.
+
+**Typical flow:** create a project → add tasks on **Board** → plan initiatives and versions on **Roadmap** → copy a **public roadmap** link from project settings when you want stakeholders to view goals and releases without logging in. CSV export and a personal API (see `docs/api.md`) support automation and backups.
+
+**Developing this app in Cursor:** MCP uses `WAYPOST_API_TOKEN` from the **project** whose work you want to track (project → Sync). For this repository, use the **Waypost** product project’s token—not another project’s—so scoped API/MCP calls hit the correct `project_id`. See **`waypost.json.example`** and **`.cursor/rules/waypost-repo-mcp.mdc`**.
+
+**Performance:** the board loads all tasks for the project in one request (virtual scrolling / lazy loading is not implemented). Above a few hundred tasks, use search and roadmap filters, split work across projects, or expect slower interactions—the UI warns when task count exceeds 300.
+
+The sections below are upstream Laravel README material retained for framework reference.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

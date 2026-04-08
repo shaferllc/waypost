@@ -35,6 +35,7 @@ class WaypostCursorSetupController extends Controller
         $onceToken = WaypostCursorArtifacts::pullCursorSetupToken($project->id);
         $zip->addFromString('waypost.json', WaypostCursorArtifacts::manifestJson($project, true, $onceToken));
         $zip->addFromString('.cursor/rules/waypost-agent-activity.mdc', WaypostCursorArtifacts::agentRuleMdcBody($project));
+        $zip->addFromString('.cursor/rules/waypost-agent-orchestration.mdc', WaypostCursorArtifacts::orchestrationRuleMdcBody($project));
         $zip->addFromString('WAYPOST-CURSOR-README.txt', WaypostCursorArtifacts::bundleReadme($project));
         $zip->close();
 

@@ -80,9 +80,9 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Two-factor authentication') }}</h1>
-        <p class="mt-1 text-sm text-ink/70">
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{{ __('Two-factor authentication') }}</h1>
+        <p class="mt-2 text-sm text-ink/60">
             @if ($useRecovery)
                 {{ __('Enter one of your recovery codes.') }}
             @else

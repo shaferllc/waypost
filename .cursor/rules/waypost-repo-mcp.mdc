@@ -1,0 +1,26 @@
+---
+description: Bind Cursor MCP to the Waypost product project (not other projects)
+alwaysApply: true
+---
+
+# This repository + Waypost MCP
+
+This git repo is the **Waypost application** source. When using Waypost MCP (`WAYPOST_API_TOKEN`), the token must come from the **same project in the app that tracks work for this codebase**—usually a project also named **Waypost** (or your canonical product project).
+
+- **Wrong:** Reusing a Sync/API token from an unrelated project (e.g. another product). MCP will only list and mutate **that** project’s id; tasks and API calls will target the wrong place.
+- **Right:** Open the **Waypost** project in the web app → **Sync** → copy the token (or download `waypost.json`) and set `WAYPOST_API_TOKEN` / merge MCP config. Use `project_id` from that file for `waypost_create_task`, `waypost_log_agent_phase`, etc.
+
+**Profile (account) tokens** can see every project; still prefer naming clarity and passing the correct `project_id` when creating tasks so work lands on the Waypost product project.
+
+If `waypost_list_projects` returns only one row, that is your scoped token’s project—confirm it matches the project you intend before creating tasks.
+
+## Creating a new project and pointing this repo at it
+
+When the user asks to create a **new** Waypost project and hook up **this** workspace:
+
+1. Call **`waypost_create_project`** with **`issue_sync_token: true`** (plus `name`, optional `description` / `url`).
+2. From the JSON response, write **`waypost_json`** verbatim to the repository root as **`waypost.json`** (that path should stay gitignored).
+3. Set the editor MCP env **`WAYPOST_API_TOKEN`** to **`sync_token`**, or open **`cursor_mcp_install_url`** once to register MCP with the new token.
+4. Do not commit `api_token` / secrets; remove `api_token` from `waypost.json` before any commit if the user adds it to tracked files by mistake.
+
+Until step 3, MCP may still use the old token—remind the user to reload MCP or restart Cursor after updating env.

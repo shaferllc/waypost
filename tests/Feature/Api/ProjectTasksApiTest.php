@@ -226,4 +226,92 @@ class ProjectTasksApiTest extends TestCase
 
         $this->getJson("/api/projects/{$project->id}")->assertForbidden();
     }
+
+    public function test_index_tasks_supports_filters(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'API',
+        ]);
+        $version = RoadmapVersion::query()->create([
+            'project_id' => $project->id,
+            'name' => 'v1',
+            'sort_order' => 0,
+        ]);
+
+        Task::query()->create([
+            'project_id' => $project->id,
+            'title' => 'Done task',
+            'status' => 'done',
+            'position' => 1,
+            'version_id' => null,
+        ]);
+        Task::query()->create([
+            'project_id' => $project->id,
+            'title' => 'Todo task',
+            'status' => 'todo',
+            'position' => 2,
+            'version_id' => $version->id,
+        ]);
+        Task::query()->create([
+            'project_id' => $project->id,
+            'title' => 'In progress',
+            'status' => 'in_progress',
+            'position' => 3,
+            'version_id' => null,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson("/api/projects/{$project->id}/tasks?open_only=1")
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $this->getJson("/api/projects/{$project->id}/tasks?status=todo")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Todo task');
+
+        $this->getJson("/api/projects/{$project->id}/tasks?exclude_status=done")
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $this->getJson("/api/projects/{$project->id}/tasks?version_id={$version->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Todo task');
+    }
+
+    public function test_patch_task_accepts_matrix_and_eisenhower_fields(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create([
+            'user_id' => $user->id,
+            'name' => 'API',
+        ]);
+        $task = Task::query()->create([
+            'project_id' => $project->id,
+            'title' => 'Classify me',
+            'status' => 'todo',
+            'position' => 0,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->patchJson("/api/projects/{$project->id}/tasks/{$task->id}", [
+            'value_level' => Task::MATRIX_HIGH,
+            'effort_level' => Task::MATRIX_LOW,
+            'eisenhower_quadrant' => Task::EISENHOWER_DO_FIRST,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.value_level', Task::MATRIX_HIGH)
+            ->assertJsonPath('data.effort_level', Task::MATRIX_LOW)
+            ->assertJsonPath('data.eisenhower_quadrant', Task::EISENHOWER_DO_FIRST);
+
+        $task->refresh();
+        $this->assertSame(Task::MATRIX_HIGH, $task->value_level);
+        $this->assertSame(Task::MATRIX_LOW, $task->effort_level);
+        $this->assertSame(Task::EISENHOWER_DO_FIRST, $task->eisenhower_quadrant);
+    }
 }

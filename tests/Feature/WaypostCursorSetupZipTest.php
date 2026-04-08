@@ -58,6 +58,7 @@ class WaypostCursorSetupZipTest extends TestCase
         $this->assertTrue($zip->open($tmp));
         $this->assertNotFalse($zip->locateName('waypost.json'));
         $this->assertNotFalse($zip->locateName('.cursor/rules/waypost-agent-activity.mdc'));
+        $this->assertNotFalse($zip->locateName('.cursor/rules/waypost-agent-orchestration.mdc'));
         $this->assertNotFalse($zip->locateName('WAYPOST-CURSOR-README.txt'));
         $manifest = $zip->getFromName('waypost.json');
         $this->assertIsString($manifest);

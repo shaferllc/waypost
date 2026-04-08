@@ -138,9 +138,9 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Sign in with email') }}</h1>
-        <p class="mt-1 text-sm text-ink/70">
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{{ __('Sign in with email') }}</h1>
+        <p class="mt-2 text-sm leading-relaxed text-ink/60">
             @if ($offerCode && $offerMagic)
                 {{ __('Enter your email and choose a one-time code or magic link. Turn on the options you want under Profile first.') }}
             @elseif ($offerMagic)
@@ -207,7 +207,7 @@ new #[Layout('layouts.guest')] class extends Component
                 <div class="w-full border-t border-cream-300"></div>
             </div>
             <div class="relative flex justify-center text-xs uppercase tracking-wide">
-                <span class="bg-cream-50 px-3 text-ink/55">{{ __('Enter code') }}</span>
+                <span class="bg-white px-3 text-ink/55">{{ __('Enter code') }}</span>
             </div>
         </div>
 

@@ -15,18 +15,39 @@
                 </p>
             </div>
             <nav class="flex flex-wrap gap-x-6 gap-y-2 text-sm shrink-0" aria-label="{{ __('Footer') }}">
-                <a href="{{ url('/') }}" wire:navigate class="text-ink/70 hover:text-ink">{{ __('Home') }}</a>
+                <a href="{{ url('/') }}" wire:navigate class="inline-flex items-center gap-1.5 text-ink/70 hover:text-ink">
+                    <x-waypost-icon name="home" class="h-4 w-4 text-sage-dark/70" />
+                    {{ __('Home') }}
+                </a>
                 @if ($variant === 'app')
-                    <a href="{{ route('dashboard') }}" wire:navigate class="text-ink/70 hover:text-ink">{{ __('Dashboard') }}</a>
-                    <a href="{{ route('projects.index') }}" wire:navigate class="text-ink/70 hover:text-ink">{{ __('Projects') }}</a>
-                    <a href="{{ route('docs.api') }}" wire:navigate class="text-ink/70 hover:text-ink">{{ __('API docs') }}</a>
-                    <a href="{{ route('profile') }}" wire:navigate class="text-ink/70 hover:text-ink">{{ __('Profile') }}</a>
+                    <a href="{{ route('dashboard') }}" wire:navigate class="inline-flex items-center gap-1.5 text-ink/70 hover:text-ink">
+                        <x-waypost-icon name="home" class="h-4 w-4 text-sage-dark/70" />
+                        {{ __('Dashboard') }}
+                    </a>
+                    <a href="{{ route('projects.index') }}" wire:navigate class="inline-flex items-center gap-1.5 text-ink/70 hover:text-ink">
+                        <x-waypost-icon name="folder" class="h-4 w-4 text-sage-dark/70" />
+                        {{ __('Projects') }}
+                    </a>
+                    <a href="{{ route('docs.api') }}" wire:navigate class="inline-flex items-center gap-1.5 text-ink/70 hover:text-ink">
+                        <x-waypost-icon name="api" class="h-4 w-4 text-sage-dark/70" />
+                        {{ __('API docs') }}
+                    </a>
+                    <a href="{{ route('profile') }}" wire:navigate class="inline-flex items-center gap-1.5 text-ink/70 hover:text-ink">
+                        <x-waypost-icon name="profile" class="h-4 w-4 text-sage-dark/70" />
+                        {{ __('Profile') }}
+                    </a>
                 @else
                     @if (Route::has('login'))
-                        <a href="{{ route('login') }}" wire:navigate class="text-ink/70 hover:text-ink">{{ __('Log in') }}</a>
+                        <a href="{{ route('login') }}" wire:navigate class="inline-flex items-center gap-1.5 text-ink/70 hover:text-ink">
+                            <x-waypost-icon name="login" class="h-4 w-4 text-sage-dark/70" />
+                            {{ __('Log in') }}
+                        </a>
                     @endif
                     @if (Route::has('register'))
-                        <a href="{{ route('register') }}" wire:navigate class="text-ink/70 hover:text-ink">{{ __('Register') }}</a>
+                        <a href="{{ route('register') }}" wire:navigate class="inline-flex items-center gap-1.5 text-ink/70 hover:text-ink">
+                            <x-waypost-icon name="register" class="h-4 w-4 text-sage-dark/70" />
+                            {{ __('Register') }}
+                        </a>
                     @endif
                 @endif
             </nav>

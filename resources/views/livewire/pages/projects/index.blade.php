@@ -105,9 +105,10 @@ class extends Component
             <a
                 href="{{ route('dashboard') }}"
                 wire:navigate
-                class="text-sm font-medium text-sage-dark hover:text-sage-deeper"
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-sage-dark hover:text-sage-deeper"
             >
-                ← Back to overview
+                <x-waypost-icon name="back" class="h-4 w-4" />
+                Back to overview
             </a>
         </div>
 
@@ -190,7 +191,7 @@ class extends Component
                         </a>
                         @if ($this->lastCreatedProject && $this->lastCreatedCursorToken)
                             <a
-                                href="{{ \App\Support\WaypostCursorArtifacts::cursorMcpInstallUrl($this->lastCreatedProject, $this->lastCreatedCursorToken) }}"
+                                href="{{ \App\Support\WaypostCursorArtifacts::cursorMcpInstallUrl($this->lastCreatedCursorToken) }}"
                                 class="inline-flex items-center rounded-lg border border-sage-dark/30 bg-white px-4 py-2 text-sm font-semibold text-sage-deeper shadow-sm hover:bg-cream-50"
                             >
                                 Install MCP in Cursor
@@ -239,7 +240,10 @@ class extends Component
             </div>
             @if ($this->projects->isEmpty())
                 <div class="rounded-2xl border border-dashed border-cream-300 bg-cream-100/80 px-6 py-16 text-center">
-                    <p class="text-ink/70">No projects yet. Create one above to get started.</p>
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-cream-200/80 text-sage-dark/70" aria-hidden="true">
+                        <x-waypost-icon name="folder" class="h-7 w-7" />
+                    </div>
+                    <p class="mt-4 text-ink/70">No projects yet. Create one above to get started.</p>
                 </div>
             @else
                 <ul class="space-y-3">
@@ -249,8 +253,9 @@ class extends Component
                             class="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-cream-300 bg-white p-5 shadow-sm transition hover:border-sage-light/50 hover:shadow-md"
                         >
                             <a href="{{ route('projects.show', $project) }}" wire:navigate class="min-w-0 flex-1">
-                                <h3 class="font-semibold text-ink group-hover:text-sage-dark">
-                                    {{ $project->name }}
+                                <h3 class="font-semibold text-ink group-hover:text-sage-dark inline-flex items-center gap-2">
+                                    <x-waypost-icon name="folder" class="h-5 w-5 shrink-0 text-sage-dark/50" />
+                                    <span>{{ $project->name }}</span>
                                     @if ($project->user_id !== auth()->id())
                                         <span class="ms-2 text-xs font-normal text-ink/50">Shared</span>
                                     @endif
@@ -281,8 +286,9 @@ class extends Component
                                 <a
                                     href="{{ route('projects.show', $project) }}"
                                     wire:navigate
-                                    class="rounded-lg bg-cream-200 px-3 py-2 text-sm font-medium text-ink hover:bg-cream-300"
+                                    class="inline-flex items-center gap-1.5 rounded-lg bg-cream-200 px-3 py-2 text-sm font-medium text-ink hover:bg-cream-300"
                                 >
+                                    <x-waypost-icon name="open-external" class="h-4 w-4" />
                                     Open
                                 </a>
                                 @can('delete', $project)
@@ -290,8 +296,9 @@ class extends Component
                                         type="button"
                                         wire:click="delete({{ $project->id }})"
                                         wire:confirm="Delete this project and all of its tasks and links?"
-                                        class="rounded-lg px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
                                     >
+                                        <x-waypost-icon name="trash" class="h-4 w-4" />
                                         Delete
                                     </button>
                                 @endcan

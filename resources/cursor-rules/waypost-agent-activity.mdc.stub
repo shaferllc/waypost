@@ -20,6 +20,7 @@ Use the **same** `session_ref` value for the matching start/end pair when you ca
 
 If the Waypost MCP server is enabled, call tool **`waypost_log_agent_phase`** with:
 
+- `project_id`: **`__PROJECT_ID__`** (this project)
 - `phase`: `"start"` or `"end"`
 - `agent` (optional): which tool you are (e.g. `cursor`, `copilot`, `windsurf`, `claude_code`) — must be a slug from **`supported_agent_types`** in **waypost.json**; overrides the header for this event
 - `session_ref` (optional): stable id for this assist session

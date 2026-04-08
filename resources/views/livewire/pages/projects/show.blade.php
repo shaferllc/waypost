@@ -127,6 +127,16 @@ class extends Component
 
     public string $editTaskPlanningStatus = '';
 
+    public string $editTaskValueLevel = '';
+
+    public string $editTaskEffortLevel = '';
+
+    public string $editTaskEisenhowerQuadrant = '';
+
+    public string $editTaskTitle = '';
+
+    public string $editTaskBody = '';
+
     public string $roadmapPlanView = 'list';
 
     public string $roadmapFilterTag = '';
@@ -234,7 +244,7 @@ class extends Component
     {
         return match ($this->syncEditor) {
             'vscode', 'vscode_insiders' => WaypostEditorMcpInstall::vscodeMcpJsonSnippet($this->project),
-            default => WaypostCursorArtifacts::mcpServersSnippetJson($this->project),
+            default => WaypostCursorArtifacts::mcpServersSnippetJson(),
         };
     }
 
@@ -464,6 +474,122 @@ class extends Component
         unset($this->project);
     }
 
+    /**
+     * @param  array<string, mixed>  $buckets  Keys: unclassified, or value|effort (e.g. high|low). Values: list of task ids.
+     */
+    public function syncMatrixBoard(array $buckets): void
+    {
+        $this->authorize('update', $this->project);
+
+        $cellKeys = [];
+        foreach (Task::MATRIX_LEVELS as $v) {
+            foreach (Task::MATRIX_LEVELS as $e) {
+                $cellKeys[] = $v.'|'.$e;
+            }
+        }
+        $allowedKeys = array_merge(['unclassified'], $cellKeys);
+
+        foreach (array_keys($buckets) as $k) {
+            if (! in_array($k, $allowedKeys, true)) {
+                return;
+            }
+        }
+
+        $normalized = [];
+        foreach ($allowedKeys as $k) {
+            $normalized[$k] = array_values(array_filter(
+                array_map('intval', $buckets[$k] ?? []),
+                fn (int $id) => $id > 0
+            ));
+        }
+
+        $flattened = collect($normalized)->flatten()->unique()->sort()->values();
+        $expected = $this->boardTasks->pluck('id')->map(intval(...))->sort()->values();
+
+        if ($flattened->toArray() !== $expected->toArray()) {
+            return;
+        }
+
+        foreach ($normalized as $key => $ids) {
+            if ($key === 'unclassified') {
+                foreach ($ids as $id) {
+                    Task::query()
+                        ->where('id', $id)
+                        ->where('project_id', $this->projectId)
+                        ->update(['value_level' => null, 'effort_level' => null]);
+                }
+            } else {
+                $parts = explode('|', $key, 2);
+                if (count($parts) !== 2) {
+                    return;
+                }
+                [$v, $e] = $parts;
+                if (! in_array($v, Task::MATRIX_LEVELS, true) || ! in_array($e, Task::MATRIX_LEVELS, true)) {
+                    return;
+                }
+                foreach ($ids as $id) {
+                    Task::query()
+                        ->where('id', $id)
+                        ->where('project_id', $this->projectId)
+                        ->update(['value_level' => $v, 'effort_level' => $e]);
+                }
+            }
+        }
+
+        unset($this->project);
+    }
+
+    /**
+     * @param  array<string, mixed>  $buckets  Keys: unclassified or Eisenhower quadrant constant. Values: list of task ids.
+     */
+    public function syncEisenhowerBoard(array $buckets): void
+    {
+        $this->authorize('update', $this->project);
+
+        $allowedKeys = array_merge(['unclassified'], Task::EISENHOWER_QUADRANTS);
+
+        foreach (array_keys($buckets) as $k) {
+            if (! in_array($k, $allowedKeys, true)) {
+                return;
+            }
+        }
+
+        $normalized = [];
+        foreach ($allowedKeys as $k) {
+            $normalized[$k] = array_values(array_filter(
+                array_map('intval', $buckets[$k] ?? []),
+                fn (int $id) => $id > 0
+            ));
+        }
+
+        $flattened = collect($normalized)->flatten()->unique()->sort()->values();
+        $expected = $this->boardTasks->pluck('id')->map(intval(...))->sort()->values();
+
+        if ($flattened->toArray() !== $expected->toArray()) {
+            return;
+        }
+
+        foreach ($normalized as $key => $ids) {
+            if ($key === 'unclassified') {
+                foreach ($ids as $id) {
+                    Task::query()
+                        ->where('id', $id)
+                        ->where('project_id', $this->projectId)
+                        ->update(['eisenhower_quadrant' => null]);
+                }
+            } else {
+                foreach ($ids as $id) {
+                    Task::query()
+                        ->where('id', $id)
+                        ->where('project_id', $this->projectId)
+                        ->update(['eisenhower_quadrant' => $key]);
+                }
+            }
+        }
+
+        unset($this->project);
+    }
+
     public function addTask(): void
     {
         $this->authorize('update', $this->project);
@@ -551,6 +677,11 @@ class extends Component
             $this->editTaskStartsAt = $task->starts_at?->format('Y-m-d') ?? '';
             $this->editTaskEndsAt = $task->ends_at?->format('Y-m-d') ?? '';
             $this->editTaskPlanningStatus = (string) ($task->planning_status ?? '');
+            $this->editTaskValueLevel = (string) ($task->value_level ?? '');
+            $this->editTaskEffortLevel = (string) ($task->effort_level ?? '');
+            $this->editTaskEisenhowerQuadrant = (string) ($task->eisenhower_quadrant ?? '');
+            $this->editTaskTitle = $task->title;
+            $this->editTaskBody = $task->body ?? '';
         }
         unset($this->focusedTask);
     }
@@ -569,6 +700,11 @@ class extends Component
         $this->editTaskStartsAt = '';
         $this->editTaskEndsAt = '';
         $this->editTaskPlanningStatus = '';
+        $this->editTaskValueLevel = '';
+        $this->editTaskEffortLevel = '';
+        $this->editTaskEisenhowerQuadrant = '';
+        $this->editTaskTitle = '';
+        $this->editTaskBody = '';
         unset($this->focusedTask);
     }
 
@@ -590,6 +726,11 @@ class extends Component
             ->all();
 
         $validated = $this->validate([
+            'editTaskTitle' => ['required', 'string', 'max:255'],
+            'editTaskBody' => ['nullable', 'string', 'max:5000'],
+            'editTaskValueLevel' => ['nullable', 'string', Rule::in(['', ...Task::MATRIX_LEVELS])],
+            'editTaskEffortLevel' => ['nullable', 'string', Rule::in(['', ...Task::MATRIX_LEVELS])],
+            'editTaskEisenhowerQuadrant' => ['nullable', 'string', Rule::in(['', ...Task::EISENHOWER_QUADRANTS])],
             'editTaskPriority' => ['required', 'integer', Rule::in([Task::PRIORITY_LOW, Task::PRIORITY_NORMAL, Task::PRIORITY_HIGH])],
             'editTaskDueDate' => ['nullable', 'date'],
             'editTaskTags' => ['nullable', 'string', 'max:500'],
@@ -619,6 +760,19 @@ class extends Component
         $tags = array_values(array_filter(array_map(trim(...), explode(',', (string) $rawTags))));
 
         $task->update([
+            'title' => $validated['editTaskTitle'],
+            'body' => $validated['editTaskBody'] !== null && $validated['editTaskBody'] !== ''
+                ? $validated['editTaskBody']
+                : null,
+            'value_level' => ($validated['editTaskValueLevel'] ?? '') !== ''
+                ? $validated['editTaskValueLevel']
+                : null,
+            'effort_level' => ($validated['editTaskEffortLevel'] ?? '') !== ''
+                ? $validated['editTaskEffortLevel']
+                : null,
+            'eisenhower_quadrant' => ($validated['editTaskEisenhowerQuadrant'] ?? '') !== ''
+                ? $validated['editTaskEisenhowerQuadrant']
+                : null,
             'priority' => $validated['editTaskPriority'],
             'due_date' => $validated['editTaskDueDate'] ?: null,
             'tags' => $tags !== [] ? $tags : null,
@@ -1143,7 +1297,7 @@ class extends Component
             WaypostCursorArtifacts::flashCursorSetupToken($this->projectId, $this->revealedCursorToken);
         }
         $this->hideRevealedCursorToken = false;
-        $url = WaypostCursorArtifacts::cursorMcpInstallUrl($this->project, $this->revealedCursorToken);
+        $url = WaypostCursorArtifacts::cursorMcpInstallUrl($this->revealedCursorToken);
         $this->showCursorMcpEmbeddedNotice = true;
         $this->js('window.location.href = '.json_encode($url));
     }
@@ -1357,9 +1511,10 @@ class extends Component
                 <a
                     href="{{ route('projects.index') }}"
                     wire:navigate
-                    class="text-sm font-medium text-sage-dark hover:text-sage-deeper"
+                    class="inline-flex items-center gap-1.5 text-sm font-medium text-sage-dark hover:text-sage-deeper"
                 >
-                    ← All projects
+                    <x-waypost-icon name="back" class="h-4 w-4" />
+                    All projects
                 </a>
                 @if ($this->editingProject)
                     <form wire:submit="saveProject" class="mt-3 max-w-2xl space-y-4">
@@ -1462,25 +1617,37 @@ class extends Component
                 class="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950"
                 role="status"
             >
-                <p class="font-medium">Large board ({{ $this->project->tasks->count() }} tasks)</p>
+                <p class="font-medium inline-flex items-center gap-2">
+                    <x-waypost-icon name="exclamation" class="h-5 w-5 shrink-0 text-amber-800" />
+                    Large board ({{ $this->project->tasks->count() }} tasks)
+                </p>
                 <p class="mt-1 text-amber-900/90">
-                    Search and roadmap filters help narrow the list. Full lazy loading for the board is not enabled yet, so very large projects may feel slower.
+                    Search and roadmap filters help narrow the list. The board loads all cards at once (lazy loading is not enabled yet), so very large projects may feel slower. Consider splitting work across projects when you pass a few hundred tasks.
                 </p>
             </div>
         @endif
 
         <div class="border-b border-cream-300">
             <nav class="-mb-px flex gap-1 overflow-x-auto pb-px" aria-label="Project sections">
-                @foreach (['board' => 'Board', 'roadmap' => 'Roadmap', 'okrs' => 'OKRs', 'wishlist' => 'Wishlist', 'links' => 'Links', 'sync' => 'Sync', 'settings' => 'Settings'] as $key => $label)
+                @foreach ([
+                    'board' => ['label' => 'Board', 'icon' => 'board'],
+                    'roadmap' => ['label' => 'Roadmap', 'icon' => 'roadmap'],
+                    'okrs' => ['label' => 'OKRs', 'icon' => 'okrs'],
+                    'wishlist' => ['label' => 'Wishlist', 'icon' => 'wishlist'],
+                    'links' => ['label' => 'Links', 'icon' => 'links'],
+                    'sync' => ['label' => 'Sync', 'icon' => 'sync'],
+                    'settings' => ['label' => 'Settings', 'icon' => 'settings'],
+                ] as $key => $meta)
                     <button
                         type="button"
                         wire:click="$set('tab', '{{ $key }}')"
-                        class="shrink-0 rounded-t-lg px-4 py-2.5 text-sm font-semibold transition
+                        class="inline-flex shrink-0 items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-semibold transition
                             {{ $this->tab === $key
                                 ? 'bg-white text-sage-deeper ring-1 ring-b-0 ring-cream-300'
                                 : 'text-ink/70 hover:text-ink hover:bg-cream-100' }}"
                     >
-                        {{ $label }}
+                        <x-waypost-icon :name="$meta['icon']" class="h-4 w-4 opacity-90" />
+                        <span>{{ $meta['label'] }}</span>
                     </button>
                 @endforeach
             </nav>
@@ -1525,9 +1692,17 @@ class extends Component
 
                     @if ($this->revealedCursorToken && ! $this->hideRevealedCursorToken)
                         <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50/90 p-3 max-w-2xl">
-                            <p class="text-sm font-medium text-ink">Your token (copy if you need it — the next ZIP also embeds it once)</p>
+                            <p class="text-sm font-medium text-ink">Your token — the next ZIP also embeds it once</p>
                             <code class="mt-2 block select-all break-all rounded bg-white p-2 text-xs text-ink ring-1 ring-cream-300">{{ $this->revealedCursorToken }}</code>
-                            <div class="mt-2 flex flex-wrap gap-2">
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    x-data="{ copied: false }"
+                                    @click="navigator.clipboard.writeText(@js($this->revealedCursorToken)); copied = true; setTimeout(() => copied = false, 2000)"
+                                    class="inline-flex items-center rounded-lg border border-amber-300/80 bg-white px-3 py-1.5 text-sm font-medium text-ink shadow-sm hover:bg-amber-100/50"
+                                >
+                                    <span x-text="copied ? 'Copied!' : 'Copy token'"></span>
+                                </button>
                                 <button
                                     type="button"
                                     wire:click="dismissRevealedCursorToken"
@@ -1657,28 +1832,63 @@ class extends Component
                 <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <p class="text-xs text-ink/50">Press <kbd class="rounded border border-cream-300 bg-cream-100 px-1">/</kbd> to focus search.</p>
                     <div class="flex flex-wrap items-center gap-2">
-                        <input
-                            x-ref="boardSearch"
-                            type="search"
-                            wire:model.live.debounce.300ms="boardSearch"
-                            placeholder="Search cards…"
-                            class="min-w-[12rem] flex-1 rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage sm:max-w-xs"
-                        />
-                        <div class="inline-flex rounded-lg border border-cream-300 p-0.5 text-xs font-semibold">
-                            <button
-                                type="button"
-                                wire:click="$set('boardLayout', 'columns')"
-                                class="rounded-md px-2 py-1 {{ $this->boardLayout === 'columns' ? 'bg-sage text-white' : 'text-ink/70' }}"
-                            >
-                                Columns
-                            </button>
-                            <button
-                                type="button"
-                                wire:click="$set('boardLayout', 'list')"
-                                class="rounded-md px-2 py-1 {{ $this->boardLayout === 'list' ? 'bg-sage text-white' : 'text-ink/70' }}"
-                            >
-                                List
-                            </button>
+                        <div class="relative min-w-[12rem] flex-1 sm:max-w-xs">
+                            <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-ink/35" aria-hidden="true">
+                                <x-waypost-icon name="search" class="h-4 w-4" />
+                            </span>
+                            <input
+                                x-ref="boardSearch"
+                                type="search"
+                                wire:model.live.debounce.300ms="boardSearch"
+                                placeholder="Search cards…"
+                                class="block w-full rounded-lg border-cream-300 py-2 ps-9 text-sm shadow-sm focus:border-sage focus:ring-sage"
+                            />
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="inline-flex rounded-lg border border-cream-300 p-0.5 text-xs font-semibold">
+                                <button
+                                    type="button"
+                                    wire:click="$set('boardLayout', 'columns')"
+                                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 {{ $this->boardLayout === 'columns' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                                >
+                                    <x-waypost-icon name="columns" class="h-3.5 w-3.5" />
+                                    Columns
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="$set('boardLayout', 'list')"
+                                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 {{ $this->boardLayout === 'list' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                                >
+                                    <x-waypost-icon name="rows" class="h-3.5 w-3.5" />
+                                    List
+                                </button>
+                            </div>
+                            <div class="inline-flex rounded-lg border border-cream-300 p-0.5 text-xs font-semibold">
+                                <button
+                                    type="button"
+                                    wire:click="$set('boardLayout', 'matrix')"
+                                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 {{ $this->boardLayout === 'matrix' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                                >
+                                    <x-waypost-icon name="matrix" class="h-3.5 w-3.5" />
+                                    Matrix
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="$set('boardLayout', 'eisenhower')"
+                                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 {{ $this->boardLayout === 'eisenhower' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                                >
+                                    <x-waypost-icon name="eisenhower" class="h-3.5 w-3.5" />
+                                    Eisenhower
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="$set('boardLayout', 'timeline')"
+                                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 {{ $this->boardLayout === 'timeline' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                                >
+                                    <x-waypost-icon name="timeline" class="h-3.5 w-3.5" />
+                                    Timeline
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1697,16 +1907,370 @@ class extends Component
                                             <span class="ms-2 text-xs font-semibold text-amber-800">Blocked</span>
                                         @endif
                                     </div>
-                                    <button
-                                        type="button"
-                                        wire:click="openTaskDetail({{ $task->id }})"
-                                        class="text-sm font-medium text-sage-dark hover:text-sage-deeper"
-                                    >
-                                        Open
-                                    </button>
+                                    <div class="inline-flex items-stretch overflow-hidden rounded-lg border border-cream-200/90 bg-white shadow-sm ring-1 ring-ink/[0.06]">
+                                        <button
+                                            type="button"
+                                            wire:click="openTaskDetail({{ $task->id }})"
+                                            class="px-2.5 py-1.5 text-xs font-semibold text-sage-dark transition hover:bg-sage-light/25"
+                                        >
+                                            Open
+                                        </button>
+                                        @can('update', $this->project)
+                                            <span class="w-px shrink-0 self-stretch bg-cream-200" aria-hidden="true"></span>
+                                            <button
+                                                type="button"
+                                                wire:click="deleteTask({{ $task->id }})"
+                                                wire:confirm="Delete this card?"
+                                                class="inline-flex items-center justify-center px-2 py-1.5 text-ink/45 transition hover:bg-red-50 hover:text-red-600"
+                                                title="Delete card"
+                                            >
+                                                <x-heroicon-o-trash class="h-4 w-4 shrink-0" />
+                                                <span class="sr-only">Delete card</span>
+                                            </button>
+                                        @endcan
+                                    </div>
                                 </li>
                             @endforeach
                         </ul>
+                    </section>
+                @endif
+
+                @if ($this->boardLayout === 'matrix')
+                    @php
+                        $matrixLabels = [
+                            'high|low' => 'Quick wins',
+                            'high|medium' => 'Do next',
+                            'high|high' => 'Major projects',
+                            'medium|low' => 'Fill-ins',
+                            'medium|medium' => 'Consider',
+                            'medium|high' => 'Careful planning',
+                            'low|low' => 'Low priority',
+                            'low|medium' => 'Reconsider',
+                            'low|high' => 'Avoid',
+                        ];
+                        $matrixTints = [
+                            'high|low' => 'bg-emerald-50/90 border-emerald-200/70',
+                            'high|medium' => 'bg-lime-50/80 border-lime-200/70',
+                            'high|high' => 'bg-amber-50/80 border-amber-200/70',
+                            'medium|low' => 'bg-teal-50/70 border-teal-200/60',
+                            'medium|medium' => 'bg-cream-100/90 border-cream-300/80',
+                            'medium|high' => 'bg-orange-50/80 border-orange-200/70',
+                            'low|low' => 'bg-stone-100/80 border-stone-200/80',
+                            'low|medium' => 'bg-rose-50/70 border-rose-200/70',
+                            'low|high' => 'bg-red-50/80 border-red-200/70',
+                        ];
+                        $valueAxis = [Task::MATRIX_HIGH, Task::MATRIX_MEDIUM, Task::MATRIX_LOW];
+                        $effortAxis = [Task::MATRIX_LOW, Task::MATRIX_MEDIUM, Task::MATRIX_HIGH];
+                        $matrixUnclassified = $this->boardTasks->filter(
+                            fn (Task $t) => $t->value_level === null || $t->value_level === '' || $t->effort_level === null || $t->effort_level === ''
+                        );
+                        $matrixDnD = Gate::allows('update', $this->project);
+                        $matrixDnDInit = $matrixDnD && trim($this->boardSearch) === '' ? '1' : '0';
+                    @endphp
+                    <section
+                        class="rounded-2xl border border-cream-300/80 bg-cream-50/50 p-4 shadow-sm ring-1 ring-ink/5 sm:p-6"
+                        @if ($matrixDnD)
+                            data-matrix-board
+                            data-matrix-init="{{ $matrixDnDInit }}"
+                        @endif
+                    >
+                        <h2 class="text-lg font-semibold text-ink">Value × Effort</h2>
+                        <p class="mt-1 text-sm text-ink/55">
+                            @if ($matrixDnD)
+                                Drag cards by the grip into the grid or back to Unclassified, or set Value and Effort in the task detail panel.
+                            @else
+                                Set Value and Effort on a card’s detail panel. High value is at the top; low effort is on the left.
+                            @endif
+                        </p>
+                        @if ($matrixUnclassified->isNotEmpty() || $matrixDnD)
+                            <div class="mt-4 rounded-xl border border-dashed border-cream-400 bg-white/80 p-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-ink/55">Unclassified</p>
+                                <p class="mt-1 text-xs text-ink/50">Tasks without both value and effort stay here until you place them.</p>
+                                <ul
+                                    class="mt-2 flex min-h-[2.5rem] flex-wrap gap-2"
+                                    @if ($matrixDnD)
+                                        data-matrix-list
+                                        data-matrix-key="unclassified"
+                                    @endif
+                                >
+                                    @foreach ($matrixUnclassified as $task)
+                                        <li
+                                            wire:key="matrix-uncl-{{ $task->id }}"
+                                            data-task-id="{{ $task->id }}"
+                                            class="flex max-w-full items-start gap-0.5 rounded-lg border border-cream-200 bg-white shadow-sm"
+                                        >
+                                            @can('update', $this->project)
+                                                <span
+                                                    class="kanban-card-handle inline-flex cursor-grab select-none items-center rounded px-0.5 py-1 text-ink/45 hover:bg-cream-200 active:cursor-grabbing"
+                                                    title="Drag to move"
+                                                >
+                                                    <span class="sr-only">Drag to move</span>
+                                                    <x-waypost-icon name="grip" class="h-3.5 w-3.5" />
+                                                </span>
+                                            @endcan
+                                            <button
+                                                type="button"
+                                                wire:click.stop="openTaskDetail({{ $task->id }})"
+                                                class="min-w-0 flex-1 px-2 py-1 text-left text-xs font-medium text-ink hover:bg-cream-50"
+                                            >
+                                                {{ $task->title }}
+                                            </button>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        <div class="mt-4 overflow-x-auto">
+                            <div class="relative min-w-[min(100%,52rem)]">
+                                <div class="mb-2 flex justify-end pe-1 text-[10px] font-semibold uppercase tracking-wide text-ink/45">
+                                    <span class="w-full max-w-[12rem] text-center">Low effort</span>
+                                    <span class="w-full max-w-[12rem] text-center">Medium</span>
+                                    <span class="w-full max-w-[12rem] text-center">High effort</span>
+                                </div>
+                                <div class="flex">
+                                    <div class="flex w-8 shrink-0 flex-col justify-between py-8 text-[10px] font-semibold uppercase tracking-wide text-ink/45 [writing-mode:vertical-rl] rotate-180">
+                                        <span>Value</span>
+                                    </div>
+                                    <div class="grid flex-1 grid-cols-3 gap-2">
+                                        @foreach ($valueAxis as $vIdx => $v)
+                                            @foreach ($effortAxis as $eIdx => $e)
+                                                @php
+                                                    $key = $v.'|'.$e;
+                                                    $cellTasks = $this->boardTasks->filter(
+                                                        fn (Task $t) => (string) $t->value_level === $v && (string) $t->effort_level === $e
+                                                    );
+                                                    $tint = $matrixTints[$key] ?? 'bg-white border-cream-200';
+                                                @endphp
+                                                <div
+                                                    wire:key="matrix-cell-{{ $key }}"
+                                                    class="flex min-h-[7rem] flex-col rounded-xl border p-2 {{ $tint }}"
+                                                >
+                                                    <p class="text-[9px] font-bold uppercase leading-tight text-ink/60">{{ $matrixLabels[$key] ?? '' }}</p>
+                                                    <ul
+                                                        class="mt-2 flex min-h-[2rem] flex-1 flex-col gap-1 overflow-y-auto"
+                                                        @if ($matrixDnD)
+                                                            data-matrix-list
+                                                            data-matrix-key="{{ $key }}"
+                                                        @endif
+                                                    >
+                                                        @foreach ($cellTasks as $task)
+                                                            <li
+                                                                wire:key="matrix-{{ $key }}-{{ $task->id }}"
+                                                                data-task-id="{{ $task->id }}"
+                                                                class="flex items-start gap-0.5 rounded-md border border-white/80 bg-white/90 shadow-sm"
+                                                            >
+                                                                @can('update', $this->project)
+                                                                    <span
+                                                                        class="kanban-card-handle inline-flex shrink-0 cursor-grab select-none items-center rounded px-0.5 py-1 text-ink/45 hover:bg-cream-200/80 active:cursor-grabbing"
+                                                                        title="Drag to move"
+                                                                    >
+                                                                        <span class="sr-only">Drag to move</span>
+                                                                        <x-waypost-icon name="grip" class="h-3.5 w-3.5" />
+                                                                    </span>
+                                                                @endcan
+                                                                <button
+                                                                    type="button"
+                                                                    wire:click.stop="openTaskDetail({{ $task->id }})"
+                                                                    class="min-w-0 flex-1 px-1.5 py-1 text-left text-[11px] font-medium text-ink hover:bg-white"
+                                                                >
+                                                                    <span class="line-clamp-2">{{ $task->title }}</span>
+                                                                    <span class="mt-0.5 block text-[9px] text-ink/45">{{ $kanbanLabels[$task->status] ?? $task->status }}</span>
+                                                                </button>
+                                                            </li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                            @endforeach
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <p class="mt-2 ps-10 text-[10px] text-ink/45">Higher value toward the top; lower effort toward the left.</p>
+                            </div>
+                        </div>
+                    </section>
+                @endif
+
+                @if ($this->boardLayout === 'eisenhower')
+                    @php
+                        $eisenhowerUnclassified = $this->boardTasks->filter(fn (Task $t) => $t->eisenhower_quadrant === null || $t->eisenhower_quadrant === '');
+                        $eisenMeta = [
+                            Task::EISENHOWER_DO_FIRST => ['label' => 'Do first', 'hint' => 'Urgent & important', 'tint' => 'bg-rose-50/90 border-rose-200/80'],
+                            Task::EISENHOWER_SCHEDULE => ['label' => 'Schedule', 'hint' => 'Important, not urgent', 'tint' => 'bg-rose-50/70 border-rose-200/60'],
+                            Task::EISENHOWER_DELEGATE => ['label' => 'Delegate', 'hint' => 'Urgent, not important', 'tint' => 'bg-amber-50/90 border-amber-200/80'],
+                            Task::EISENHOWER_ELIMINATE => ['label' => 'Eliminate', 'hint' => 'Neither', 'tint' => 'bg-cream-200/60 border-cream-300/80'],
+                        ];
+                        $eisenDnD = Gate::allows('update', $this->project);
+                        $eisenDnDInit = $eisenDnD && trim($this->boardSearch) === '' ? '1' : '0';
+                    @endphp
+                    <section
+                        class="rounded-2xl border border-cream-300/80 bg-white p-4 shadow-sm ring-1 ring-ink/5 sm:p-6"
+                        @if ($eisenDnD)
+                            data-eisenhower-board
+                            data-eisenhower-init="{{ $eisenDnDInit }}"
+                        @endif
+                    >
+                        <h2 class="text-lg font-semibold text-ink">Eisenhower matrix</h2>
+                        <p class="mt-1 text-sm text-ink/55">
+                            @if ($eisenDnD)
+                                Drag cards by the grip into a quadrant or back to Unclassified, or choose a quadrant in the task detail panel. Urgent is on the left; important is the top row.
+                            @else
+                                Choose a quadrant in the task detail panel. Urgent is on the left; important is the top row.
+                            @endif
+                        </p>
+                        @if ($eisenhowerUnclassified->isNotEmpty() || $eisenDnD)
+                            <div class="mt-4 rounded-xl border border-dashed border-cream-400 bg-cream-50/80 p-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-ink/55">Unclassified</p>
+                                <ul
+                                    class="mt-2 flex min-h-[2.5rem] flex-wrap gap-2"
+                                    @if ($eisenDnD)
+                                        data-eisenhower-list
+                                        data-eisenhower-key="unclassified"
+                                    @endif
+                                >
+                                    @foreach ($eisenhowerUnclassified as $task)
+                                        <li
+                                            wire:key="eisen-uncl-{{ $task->id }}"
+                                            data-task-id="{{ $task->id }}"
+                                            class="flex max-w-full items-start gap-0.5 rounded-lg border border-cream-200 bg-white shadow-sm"
+                                        >
+                                            @can('update', $this->project)
+                                                <span
+                                                    class="kanban-card-handle inline-flex cursor-grab select-none items-center rounded px-0.5 py-1 text-ink/45 hover:bg-cream-200 active:cursor-grabbing"
+                                                    title="Drag to move"
+                                                >
+                                                    <span class="sr-only">Drag to move</span>
+                                                    <x-waypost-icon name="grip" class="h-3.5 w-3.5" />
+                                                </span>
+                                            @endcan
+                                            <button
+                                                type="button"
+                                                wire:click.stop="openTaskDetail({{ $task->id }})"
+                                                class="min-w-0 flex-1 px-2 py-1 text-left text-xs font-medium text-ink hover:bg-cream-50"
+                                            >
+                                                {{ $task->title }}
+                                            </button>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        <div class="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-[7rem_1fr_1fr] sm:gap-3">
+                            <div class="hidden sm:block"></div>
+                            <div class="rounded-t-lg bg-cream-100/80 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-ink/55 sm:rounded-t-lg">Urgent</div>
+                            <div class="rounded-t-lg bg-cream-100/80 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-ink/55 sm:rounded-t-lg">Not urgent</div>
+
+                            <div class="flex items-center rounded-lg bg-cream-100/80 px-2 py-4 text-[10px] font-semibold uppercase tracking-wide text-ink/55 sm:max-w-[7rem] [writing-mode:vertical-rl] sm:rotate-180">Important</div>
+                            @foreach ([Task::EISENHOWER_DO_FIRST, Task::EISENHOWER_SCHEDULE] as $q)
+                                @php
+                                    $meta = $eisenMeta[$q];
+                                    $bucket = $this->boardTasks->filter(fn (Task $t) => (string) $t->eisenhower_quadrant === $q);
+                                @endphp
+                                <div
+                                    wire:key="eisen-top-{{ $q }}"
+                                    class="flex min-h-[10rem] flex-col rounded-xl border p-3 {{ $meta['tint'] }}"
+                                >
+                                    <p class="text-xs font-bold text-ink">{{ $meta['label'] }}</p>
+                                    <p class="text-[10px] text-ink/55">{{ $meta['hint'] }}</p>
+                                    <ul
+                                        class="mt-2 flex min-h-[2rem] flex-1 flex-col gap-1.5 overflow-y-auto"
+                                        @if ($eisenDnD)
+                                            data-eisenhower-list
+                                            data-eisenhower-key="{{ $q }}"
+                                        @endif
+                                    >
+                                        @foreach ($bucket as $task)
+                                            <li
+                                                wire:key="eisen-{{ $q }}-{{ $task->id }}"
+                                                data-task-id="{{ $task->id }}"
+                                                class="flex items-start gap-0.5 rounded-lg border border-white/60 bg-white/95 shadow-sm"
+                                            >
+                                                @can('update', $this->project)
+                                                    <span
+                                                        class="kanban-card-handle inline-flex shrink-0 cursor-grab select-none items-center rounded px-0.5 py-1 text-ink/45 hover:bg-cream-200/80 active:cursor-grabbing"
+                                                        title="Drag to move"
+                                                    >
+                                                        <span class="sr-only">Drag to move</span>
+                                                        <x-waypost-icon name="grip" class="h-3.5 w-3.5" />
+                                                    </span>
+                                                @endcan
+                                                <button
+                                                    type="button"
+                                                    wire:click.stop="openTaskDetail({{ $task->id }})"
+                                                    class="min-w-0 flex-1 px-2 py-1.5 text-left text-xs font-medium text-ink hover:bg-white"
+                                                >
+                                                    <span class="line-clamp-2">{{ $task->title }}</span>
+                                                    <span class="mt-0.5 block text-[10px] text-ink/45">{{ $kanbanLabels[$task->status] ?? $task->status }}</span>
+                                                </button>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endforeach
+
+                            <div class="flex items-center rounded-lg bg-cream-100/80 px-2 py-4 text-[10px] font-semibold uppercase tracking-wide text-ink/55 sm:max-w-[7rem] [writing-mode:vertical-rl] sm:rotate-180">Not important</div>
+                            @foreach ([Task::EISENHOWER_DELEGATE, Task::EISENHOWER_ELIMINATE] as $q)
+                                @php
+                                    $meta = $eisenMeta[$q];
+                                    $bucket = $this->boardTasks->filter(fn (Task $t) => (string) $t->eisenhower_quadrant === $q);
+                                @endphp
+                                <div
+                                    wire:key="eisen-bot-{{ $q }}"
+                                    class="flex min-h-[10rem] flex-col rounded-xl border p-3 {{ $meta['tint'] }}"
+                                >
+                                    <p class="text-xs font-bold text-ink">{{ $meta['label'] }}</p>
+                                    <p class="text-[10px] text-ink/55">{{ $meta['hint'] }}</p>
+                                    <ul
+                                        class="mt-2 flex min-h-[2rem] flex-1 flex-col gap-1.5 overflow-y-auto"
+                                        @if ($eisenDnD)
+                                            data-eisenhower-list
+                                            data-eisenhower-key="{{ $q }}"
+                                        @endif
+                                    >
+                                        @foreach ($bucket as $task)
+                                            <li
+                                                wire:key="eisen-{{ $q }}-{{ $task->id }}"
+                                                data-task-id="{{ $task->id }}"
+                                                class="flex items-start gap-0.5 rounded-lg border border-white/60 bg-white/95 shadow-sm"
+                                            >
+                                                @can('update', $this->project)
+                                                    <span
+                                                        class="kanban-card-handle inline-flex shrink-0 cursor-grab select-none items-center rounded px-0.5 py-1 text-ink/45 hover:bg-cream-200/80 active:cursor-grabbing"
+                                                        title="Drag to move"
+                                                    >
+                                                        <span class="sr-only">Drag to move</span>
+                                                        <x-waypost-icon name="grip" class="h-3.5 w-3.5" />
+                                                    </span>
+                                                @endcan
+                                                <button
+                                                    type="button"
+                                                    wire:click.stop="openTaskDetail({{ $task->id }})"
+                                                    class="min-w-0 flex-1 px-2 py-1.5 text-left text-xs font-medium text-ink hover:bg-white"
+                                                >
+                                                    <span class="line-clamp-2">{{ $task->title }}</span>
+                                                    <span class="mt-0.5 block text-[10px] text-ink/45">{{ $kanbanLabels[$task->status] ?? $task->status }}</span>
+                                                </button>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+
+                @if ($this->boardLayout === 'timeline')
+                    <section class="rounded-2xl border border-cream-300/80 bg-white p-6 shadow-sm ring-1 ring-ink/5">
+                        <h2 class="text-lg font-semibold text-ink inline-flex items-center gap-2">
+                            <x-waypost-icon name="timeline" class="h-5 w-5 text-sage-dark/80" />
+                            Initiative timeline
+                        </h2>
+                        <p class="mt-1 text-sm text-ink/55">Same date logic as the Roadmap timeline: initiative start/end, or inferred from due dates. Click a task name to open details.</p>
+                        <div class="mt-4">
+                            @include('partials.task-initiative-timeline', [
+                                'tasks' => $this->boardTasks,
+                                'interactive' => true,
+                            ])
+                        </div>
                     </section>
                 @endif
 
@@ -1716,7 +2280,7 @@ class extends Component
                 <div
                     data-kanban-board
                     data-kanban-init="{{ $this->boardLayout === 'columns' && trim($this->boardSearch) === '' ? '1' : '0' }}"
-                    class="overflow-x-auto pb-2 -mx-1 px-1 {{ $this->boardLayout === 'list' ? 'hidden' : '' }}"
+                    class="overflow-x-auto pb-2 -mx-1 px-1 {{ $this->boardLayout === 'columns' ? '' : 'hidden' }}"
                 >
                     <div class="flex min-h-[28rem] gap-4" style="min-width: min(100%, 70rem);">
                         @foreach (Task::KANBAN_STATUSES as $status)
@@ -1747,9 +2311,12 @@ class extends Component
                                             class="flex gap-2 rounded-lg border border-cream-300 bg-white p-2 shadow-sm"
                                         >
                                             <span
-                                                class="kanban-card-handle cursor-grab select-none rounded px-0.5 py-1 text-ink/40 hover:bg-cream-200 active:cursor-grabbing"
+                                                class="kanban-card-handle inline-flex cursor-grab select-none items-center rounded px-0.5 py-1 text-ink/45 hover:bg-cream-200 active:cursor-grabbing"
                                                 title="Drag to move"
-                                            >⋮⋮</span>
+                                            >
+                                                <span class="sr-only">Drag to reorder</span>
+                                                <x-waypost-icon name="grip" class="h-4 w-4" />
+                                            </span>
                                             <div class="min-w-0 flex-1">
                                                 <p class="font-medium text-ink text-sm">{{ $task->title }}</p>
                                                 @if ($task->body)
@@ -1772,13 +2339,30 @@ class extends Component
                                                     @endif
                                                 </div>
                                             </div>
-                                            <button
-                                                type="button"
-                                                wire:click.stop="openTaskDetail({{ $task->id }})"
-                                                class="shrink-0 self-start rounded-md px-2 py-1 text-xs font-semibold text-sage-dark hover:bg-sage-light/10"
-                                            >
-                                                Open
-                                            </button>
+                                            <div class="flex shrink-0 self-start pt-0.5">
+                                                <div class="inline-flex items-stretch overflow-hidden rounded-lg border border-cream-200/90 bg-white shadow-sm ring-1 ring-ink/[0.06]">
+                                                    <button
+                                                        type="button"
+                                                        wire:click.stop="openTaskDetail({{ $task->id }})"
+                                                        class="px-2.5 py-1.5 text-xs font-semibold text-sage-dark transition hover:bg-sage-light/25"
+                                                    >
+                                                        Open
+                                                    </button>
+                                                    @can('update', $this->project)
+                                                        <span class="w-px shrink-0 self-stretch bg-cream-200" aria-hidden="true"></span>
+                                                        <button
+                                                            type="button"
+                                                            wire:click.stop="deleteTask({{ $task->id }})"
+                                                            wire:confirm="Delete this card?"
+                                                            class="inline-flex items-center justify-center px-2 py-1.5 text-ink/45 transition hover:bg-red-50 hover:text-red-600"
+                                                            title="Delete card"
+                                                        >
+                                                            <x-heroicon-o-trash class="h-4 w-4 shrink-0" />
+                                                            <span class="sr-only">Delete card</span>
+                                                        </button>
+                                                    @endcan
+                                                </div>
+                                            </div>
                                         </li>
                                     @endforeach
                                 </ul>
@@ -1903,8 +2487,9 @@ class extends Component
                 <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between rounded-xl border border-cream-300/80 bg-white p-4 shadow-sm">
                     <a
                         href="{{ route('projects.export.tasks', $this->project) }}"
-                        class="text-sm font-semibold text-sage-dark hover:text-sage-deeper underline"
+                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-sage-dark underline hover:text-sage-deeper"
                     >
+                        <x-waypost-icon name="export" class="h-4 w-4" />
                         Export all tasks (CSV)
                     </a>
                     <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-ink/80">
@@ -1923,15 +2508,17 @@ class extends Component
                             <button
                                 type="button"
                                 wire:click="$set('roadmapPlanView', 'list')"
-                                class="rounded-md px-2 py-1 {{ $this->roadmapPlanView === 'list' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                                class="inline-flex items-center gap-1 rounded-md px-2 py-1 {{ $this->roadmapPlanView === 'list' ? 'bg-sage text-white' : 'text-ink/70' }}"
                             >
+                                <x-waypost-icon name="list" class="h-3.5 w-3.5" />
                                 List
                             </button>
                             <button
                                 type="button"
                                 wire:click="$set('roadmapPlanView', 'timeline')"
-                                class="rounded-md px-2 py-1 {{ $this->roadmapPlanView === 'timeline' ? 'bg-sage text-white' : 'text-ink/70' }}"
+                                class="inline-flex items-center gap-1 rounded-md px-2 py-1 {{ $this->roadmapPlanView === 'timeline' ? 'bg-sage text-white' : 'text-ink/70' }}"
                             >
+                                <x-waypost-icon name="timeline" class="h-3.5 w-3.5" />
                                 Timeline
                             </button>
                         </div>
@@ -2083,96 +2670,30 @@ class extends Component
                                         type="button"
                                         wire:click="gotoRoadmapPlanPage({{ $this->roadmapPlanPage - 1 }})"
                                         @disabled($this->roadmapPlanPage <= 1)
-                                        class="rounded-lg border border-cream-300 px-3 py-1.5 font-semibold text-ink hover:bg-cream-100 disabled:opacity-40"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-cream-300 px-3 py-1.5 font-semibold text-ink hover:bg-cream-100 disabled:opacity-40"
                                     >
+                                        <x-waypost-icon name="chevron-left" class="h-4 w-4" />
                                         Previous
                                     </button>
                                     <button
                                         type="button"
                                         wire:click="gotoRoadmapPlanPage({{ $this->roadmapPlanPage + 1 }})"
                                         @disabled($this->roadmapPlanPage >= $this->roadmapPlanTasksLastPage)
-                                        class="rounded-lg border border-cream-300 px-3 py-1.5 font-semibold text-ink hover:bg-cream-100 disabled:opacity-40"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-cream-300 px-3 py-1.5 font-semibold text-ink hover:bg-cream-100 disabled:opacity-40"
                                     >
                                         Next
+                                        <x-waypost-icon name="chevron-right" class="h-4 w-4" />
                                     </button>
                                 </div>
                             </div>
                         @endif
                     @else
-                        @php
-                            $tlTasks = $this->initiativeTimelineTasks;
-                            $rangeStart = null;
-                            $rangeEnd = null;
-                            foreach ($tlTasks as $t) {
-                                $s = $t->initiativeStart();
-                                $e = $t->initiativeEnd();
-                                if ($s && ($rangeStart === null || $s->lt($rangeStart))) {
-                                    $rangeStart = $s->copy()->startOfDay();
-                                }
-                                if ($e && ($rangeEnd === null || $e->gt($rangeEnd))) {
-                                    $rangeEnd = $e->copy()->endOfDay();
-                                }
-                            }
-                            if ($rangeStart && $rangeEnd) {
-                                $timelineStart = $rangeStart->copy()->startOfMonth();
-                                $timelineEnd = $rangeEnd->copy()->endOfMonth();
-                                $totalDays = max(1, $timelineStart->diffInDays($timelineEnd) + 1);
-                                $monthCursor = $timelineStart->copy();
-                                $monthLabels = [];
-                                while ($monthCursor->lte($timelineEnd)) {
-                                    $monthLabels[] = $monthCursor->copy();
-                                    $monthCursor->addMonth()->startOfMonth();
-                                }
-                            } else {
-                                $timelineStart = null;
-                                $totalDays = 1;
-                                $monthLabels = [];
-                            }
-                        @endphp
-                        @if ($timelineStart)
-                            <div class="mt-6 space-y-2">
-                                <div class="flex ps-[11rem] pe-1">
-                                    @foreach ($monthLabels as $m)
-                                        <div class="flex-1 min-w-0 border-l border-cream-200 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-ink/50">
-                                            {{ $m->format('M') }}
-                                        </div>
-                                    @endforeach
-                                </div>
-                                @foreach ($tlTasks as $tt)
-                                    @php
-                                        $ts = $tt->initiativeStart()->startOfDay();
-                                        $te = $tt->initiativeEnd()->endOfDay();
-                                        $leftPct = min(100, max(0, ($timelineStart->diffInDays($ts) / $totalDays) * 100));
-                                        $spanDays = max(1, $ts->diffInDays($te) + 1);
-                                        $widthPct = min(100 - $leftPct, max(0.8, ($spanDays / $totalDays) * 100));
-                                    @endphp
-                                    @php $ttBlocked = $tt->blocking_links_count > 0; @endphp
-                                    <div class="flex items-center gap-3 text-sm">
-                                        <span class="w-44 shrink-0 truncate text-xs font-medium text-ink" title="{{ $tt->title }}">{{ $tt->title }}</span>
-                                        <div class="relative h-7 min-w-0 flex-1 rounded-md {{ $ttBlocked ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-cream-100' }}">
-                                            <div
-                                                class="absolute top-1 bottom-1 rounded-md {{ $ttBlocked ? 'bg-amber-600' : 'bg-sage' }} shadow-sm"
-                                                style="left: {{ $leftPct }}%; width: {{ $widthPct }}%; min-width: 4px;"
-                                            ></div>
-                                        </div>
-                                        @if ($ttBlocked)
-                                            <span class="shrink-0 text-[10px] font-semibold uppercase text-amber-900">Blocked</span>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                            @if ($tlTasks->contains(fn ($t) => $t->blocking_links_count > 0))
-                                <p class="mt-4 text-xs text-ink/55">Amber bars indicate tasks with a <strong>blocked by</strong> dependency. Resolve links on the task detail panel.</p>
-                            @endif
-                        @else
-                            <p class="mt-6 text-sm text-ink/55">
-                                @if ($this->project->tasks->isEmpty())
-                                    Add tasks on the Board tab, then set initiative start/end dates (or a due date) to populate this timeline.
-                                @else
-                                    No schedulable dates yet. Add start/end dates or a due date on tasks—those dates drive this view and spot overlaps.
-                                @endif
-                            </p>
-                        @endif
+                        <div class="mt-6">
+                            @include('partials.task-initiative-timeline', [
+                                'tasks' => $this->project->tasks,
+                                'interactive' => false,
+                            ])
+                        </div>
                     @endif
                 </section>
 
@@ -2889,8 +3410,22 @@ class extends Component
             ></div>
             <div class="relative flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-cream-300 bg-white shadow-xl">
                 <div class="flex items-start justify-between gap-4 border-b border-cream-200 px-5 py-4">
-                    <div class="min-w-0">
-                        <h2 class="text-lg font-bold text-ink">{{ $ft->title }}</h2>
+                    <div class="min-w-0 flex-1">
+                        @can('update', $this->project)
+                            <label for="edit-task-title" class="sr-only">Title</label>
+                            <input
+                                id="edit-task-title"
+                                form="task-detail-meta-form"
+                                type="text"
+                                wire:model="editTaskTitle"
+                                class="w-full rounded-lg border border-cream-200 bg-white px-3 py-2 text-lg font-semibold text-ink shadow-sm focus:border-sage focus:ring-sage"
+                            />
+                            @error('editTaskTitle')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        @else
+                            <h2 class="text-lg font-bold text-ink">{{ $ft->title }}</h2>
+                        @endcan
                         @if ($ft->version)
                             <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-sage-dark">{{ $ft->version->name }}</p>
                         @endif
@@ -2905,17 +3440,67 @@ class extends Component
                     </button>
                 </div>
                 <div class="flex-1 overflow-y-auto px-5 py-4 space-y-6">
-                    @if ($ft->body)
-                        <div>
-                            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Description</h3>
-                            <div class="markdown-body mt-2 max-w-none text-sm leading-relaxed text-ink [&_a]:font-medium [&_a]:text-sage-dark [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-cream-300 [&_blockquote]:ps-3 [&_code]:rounded [&_code]:bg-cream-100 [&_code]:px-1 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:ps-5">
-                                {!! str($ft->body)->markdown() !!}
+                    @cannot('update', $this->project)
+                        @if ($ft->body)
+                            <div>
+                                <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Description</h3>
+                                <div class="markdown-body mt-2 max-w-none text-sm leading-relaxed text-ink [&_a]:font-medium [&_a]:text-sage-dark [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-cream-300 [&_blockquote]:ps-3 [&_code]:rounded [&_code]:bg-cream-100 [&_code]:px-1 [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:ps-5">
+                                    {!! str($ft->body)->markdown() !!}
+                                </div>
                             </div>
-                        </div>
-                    @endif
+                        @endif
+                    @endcannot
 
                     @can('update', $this->project)
-                        <form wire:submit="saveTaskMeta" class="space-y-3 rounded-xl border border-cream-200 bg-cream-50/80 p-4">
+                        <form id="task-detail-meta-form" wire:submit="saveTaskMeta" class="space-y-4">
+                            <div>
+                                <label for="edit-task-body" class="text-xs font-semibold uppercase tracking-wide text-ink/55">Description</label>
+                                <textarea
+                                    id="edit-task-body"
+                                    wire:model="editTaskBody"
+                                    rows="6"
+                                    class="mt-2 block w-full rounded-lg border-cream-300 text-sm shadow-sm focus:border-sage focus:ring-sage"
+                                    placeholder="Optional. Markdown is supported."
+                                ></textarea>
+                                @error('editTaskBody')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="space-y-3 rounded-xl border border-cream-200 bg-white p-4 shadow-sm ring-1 ring-ink/[0.04]">
+                                <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Prioritization</h3>
+                                <p class="text-xs text-ink/55">Value × Effort (matrix) and Eisenhower quadrant (Board alternate views). Leave unset to keep a card in Unclassified.</p>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label class="block text-xs text-ink/70">Value (matrix)</label>
+                                        <select wire:model="editTaskValueLevel" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                            <option value="">— Not set —</option>
+                                            @foreach (Task::MATRIX_LEVELS as $lvl)
+                                                <option value="{{ $lvl }}">{{ ucfirst($lvl) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-ink/70">Effort (matrix)</label>
+                                        <select wire:model="editTaskEffortLevel" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                            <option value="">— Not set —</option>
+                                            @foreach (Task::MATRIX_LEVELS as $lvl)
+                                                <option value="{{ $lvl }}">{{ ucfirst($lvl) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="sm:col-span-2">
+                                        <label class="block text-xs text-ink/70">Eisenhower quadrant</label>
+                                        <select wire:model="editTaskEisenhowerQuadrant" class="mt-1 block w-full rounded-lg border-cream-300 text-sm shadow-sm">
+                                            <option value="">— Not set —</option>
+                                            <option value="{{ Task::EISENHOWER_DO_FIRST }}">Do first (urgent &amp; important)</option>
+                                            <option value="{{ Task::EISENHOWER_SCHEDULE }}">Schedule (important, not urgent)</option>
+                                            <option value="{{ Task::EISENHOWER_DELEGATE }}">Delegate (urgent, not important)</option>
+                                            <option value="{{ Task::EISENHOWER_ELIMINATE }}">Eliminate (neither)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-3 rounded-xl border border-cream-200 bg-cream-50/80 p-4">
                             <h3 class="text-xs font-semibold uppercase tracking-wide text-ink/55">Planning</h3>
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <div>
@@ -2981,7 +3566,8 @@ class extends Component
                                     </select>
                                 </div>
                             </div>
-                            <button type="submit" class="rounded-lg bg-sage px-3 py-2 text-sm font-semibold text-white hover:bg-sage-dark">Save planning fields</button>
+                            </div>
+                            <button type="submit" class="rounded-lg bg-sage px-3 py-2 text-sm font-semibold text-white hover:bg-sage-dark">Save changes</button>
                         </form>
                     @endcan
 

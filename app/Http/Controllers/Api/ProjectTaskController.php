@@ -17,11 +17,82 @@ class ProjectTaskController extends Controller
     {
         Gate::authorize('view', $project);
 
-        $tasks = $project->tasks()->get();
+        $validated = $request->validate([
+            'exclude_status' => ['nullable', 'string', 'max:500'],
+            'open_only' => ['sometimes', 'boolean'],
+            'version_id' => ['nullable', 'integer'],
+            'theme_id' => ['nullable', 'integer'],
+            'planning_status' => ['nullable', 'string', Rule::in(Task::PLANNING_STATUSES)],
+        ]);
+
+        $query = $project->tasks()->getQuery();
+
+        if ($request->boolean('open_only')) {
+            $query->where('status', '!=', 'done');
+        }
+
+        if (! empty($validated['exclude_status'])) {
+            $exclude = $this->parseStatusFilter((string) $validated['exclude_status']);
+            if ($exclude !== []) {
+                $query->whereNotIn('status', $exclude);
+            }
+        }
+
+        $statusInput = $request->input('status');
+        if ($statusInput !== null && $statusInput !== '' && $statusInput !== []) {
+            $include = $this->parseStatusFilterFromInput(is_array($statusInput) ? $statusInput : (string) $statusInput);
+            if ($include !== []) {
+                $query->whereIn('status', $include);
+            }
+        }
+
+        if (array_key_exists('version_id', $validated) && $validated['version_id'] !== null) {
+            $query->where('version_id', $validated['version_id']);
+        }
+
+        if (array_key_exists('theme_id', $validated) && $validated['theme_id'] !== null) {
+            $query->where('theme_id', $validated['theme_id']);
+        }
+
+        if (array_key_exists('planning_status', $validated) && $validated['planning_status'] !== null) {
+            $query->where('planning_status', $validated['planning_status']);
+        }
+
+        $tasks = $query->orderBy('position')->get();
 
         return response()->json([
             'data' => $tasks->map(fn (Task $t) => $this->taskPayload($t)),
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function parseStatusFilter(string $raw): array
+    {
+        $parts = array_map('trim', explode(',', $raw));
+
+        return array_values(array_filter($parts, fn (string $s) => $s !== '' && in_array($s, Task::KANBAN_STATUSES, true)));
+    }
+
+    /**
+     * @param  array<string>|string  $input
+     * @return list<string>
+     */
+    private function parseStatusFilterFromInput(array|string $input): array
+    {
+        if (is_array($input)) {
+            $parts = [];
+            foreach ($input as $s) {
+                if (is_string($s) && $s !== '') {
+                    $parts[] = trim($s);
+                }
+            }
+        } else {
+            $parts = array_map('trim', explode(',', $input));
+        }
+
+        return array_values(array_filter($parts, fn (string $s) => $s !== '' && in_array($s, Task::KANBAN_STATUSES, true)));
     }
 
     public function show(Request $request, Project $project, Task $task): JsonResponse
@@ -63,6 +134,9 @@ class ProjectTaskController extends Controller
             ],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:64'],
+            'value_level' => ['nullable', 'string', Rule::in(Task::MATRIX_LEVELS)],
+            'effort_level' => ['nullable', 'string', Rule::in(Task::MATRIX_LEVELS)],
+            'eisenhower_quadrant' => ['nullable', 'string', Rule::in(Task::EISENHOWER_QUADRANTS)],
         ]);
 
         $status = $validated['status'] ?? 'todo';
@@ -83,6 +157,9 @@ class ProjectTaskController extends Controller
             'planning_status' => $validated['planning_status'] ?? null,
             'okr_objective_id' => $validated['okr_objective_id'] ?? null,
             'tags' => $validated['tags'] ?? null,
+            'value_level' => $validated['value_level'] ?? null,
+            'effort_level' => $validated['effort_level'] ?? null,
+            'eisenhower_quadrant' => $validated['eisenhower_quadrant'] ?? null,
         ]);
 
         return response()->json([
@@ -121,6 +198,9 @@ class ProjectTaskController extends Controller
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:64'],
             'position' => ['sometimes', 'integer', 'min:0', 'max:100000'],
+            'value_level' => ['nullable', 'string', Rule::in(Task::MATRIX_LEVELS)],
+            'effort_level' => ['nullable', 'string', Rule::in(Task::MATRIX_LEVELS)],
+            'eisenhower_quadrant' => ['nullable', 'string', Rule::in(Task::EISENHOWER_QUADRANTS)],
         ]);
 
         $task->update($validated);
@@ -164,6 +244,9 @@ class ProjectTaskController extends Controller
             'starts_at' => $task->starts_at?->format('Y-m-d'),
             'ends_at' => $task->ends_at?->format('Y-m-d'),
             'planning_status' => $task->planning_status,
+            'value_level' => $task->value_level,
+            'effort_level' => $task->effort_level,
+            'eisenhower_quadrant' => $task->eisenhower_quadrant,
             'tags' => $task->tags,
             'created_at' => $task->created_at?->toIso8601String(),
             'updated_at' => $task->updated_at?->toIso8601String(),

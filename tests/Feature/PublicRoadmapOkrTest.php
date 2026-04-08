@@ -61,4 +61,10 @@ class PublicRoadmapOkrTest extends TestCase
             ->assertSee('Initiative timeline')
             ->assertSee('Onboarding v2');
     }
+
+    public function test_public_roadmap_returns_not_found_for_unknown_token(): void
+    {
+        $this->get(route('roadmap.public', ['token' => 'nonexistent-token-'.str_repeat('z', 40)]))
+            ->assertNotFound();
+    }
 }

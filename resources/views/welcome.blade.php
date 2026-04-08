@@ -58,15 +58,24 @@
                     </div>
                     <ul class="mt-16 grid gap-4 text-left sm:grid-cols-3 text-sm text-ink/70">
                         <li class="rounded-xl border border-cream-300 bg-cream-50/90 p-4 shadow-sm ring-1 ring-ink/5">
-                            <span class="font-semibold text-ink">Projects</span>
+                            <span class="font-semibold text-ink inline-flex items-center gap-2">
+                                <x-waypost-icon name="folder" class="h-5 w-5 text-sage-dark/80" />
+                                Projects
+                            </span>
                             <p class="mt-1">Separate spaces for every idea or client.</p>
                         </li>
                         <li class="rounded-xl border border-cream-300 bg-cream-50/90 p-4 shadow-sm ring-1 ring-ink/5">
-                            <span class="font-semibold text-ink">Tasks</span>
+                            <span class="font-semibold text-ink inline-flex items-center gap-2">
+                                <x-waypost-icon name="clipboard" class="h-5 w-5 text-sage-dark/80" />
+                                Tasks
+                            </span>
                             <p class="mt-1">To do, in progress, and done—fast to update.</p>
                         </li>
                         <li class="rounded-xl border border-cream-300 bg-cream-50/90 p-4 shadow-sm ring-1 ring-ink/5">
-                            <span class="font-semibold text-ink">Links</span>
+                            <span class="font-semibold text-ink inline-flex items-center gap-2">
+                                <x-waypost-icon name="link" class="h-5 w-5 text-sage-dark/80" />
+                                Links
+                            </span>
                             <p class="mt-1">Repos, docs, and references beside the work.</p>
                         </li>
                     </ul>

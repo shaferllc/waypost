@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ | Heroicons outline SVGs use stroke="currentColor". Ensure the glyph paints even when
+ | nested in flex/link contexts, and keep icons aligned with adjacent text.
+ */
+@layer components {
+    .waypost-icon > svg[data-slot='icon'] {
+        display: block;
+        flex-shrink: 0;
+    }
+
+    /* Single class for SortableJS chosenClass (must be one token; no spaces). */
+    .kanban-sortable-chosen {
+        @apply ring-2 ring-teal-400;
+    }
+}

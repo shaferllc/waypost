@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\WaypostCursorArtifacts;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -43,6 +44,28 @@ new class extends Component
                 {{ __('View full API documentation') }}
             </a>
         </p>
+
+        <div class="mt-8 max-w-2xl rounded-lg border border-cream-300/80 bg-white/80 p-4 text-sm text-ink/90 shadow-sm ring-1 ring-ink/5">
+            <h3 class="text-base font-semibold text-ink">{{ __('Connect MCP (easiest)') }}</h3>
+            <p class="mt-2 text-sm text-ink/75">
+                {{ __('Use a Profile API token (create below) as WAYPOST_API_TOKEN so your editor can call Waypost MCP at') }}
+                <code class="rounded bg-cream-200 px-1 py-0.5 text-xs">{{ WaypostCursorArtifacts::mcpHttpUrl() }}</code>.
+                {{ __('For MCP tied to one product, prefer that project’s Sync token so tasks and API paths stay on that project. Profile tokens see all projects.') }}
+            </p>
+            <p class="mt-3 text-sm text-ink/75">
+                {{ __('Copy this into Cursor → Settings → MCP (merge into mcpServers), then set WAYPOST_API_TOKEN to your new token:') }}
+            </p>
+            <pre class="mt-2 max-h-48 overflow-auto rounded-md border border-cream-200 bg-cream-50 p-3 text-xs leading-relaxed text-ink"><code>{{ WaypostCursorArtifacts::mcpServersSnippetJson() }}</code></pre>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+                <a
+                    href="{{ WaypostCursorArtifacts::cursorMcpInstallUrl() }}"
+                    class="inline-flex items-center rounded-lg bg-sage-dark px-3 py-2 text-sm font-medium text-white shadow hover:bg-sage-deeper"
+                >
+                    {{ __('Add Waypost MCP to Cursor') }}
+                </a>
+                <span class="text-xs text-ink/55">{{ __('Opens Cursor with this server URL; you still need WAYPOST_API_TOKEN in your environment.') }}</span>
+            </div>
+        </div>
     </header>
 
     @if ($plain_text_token)

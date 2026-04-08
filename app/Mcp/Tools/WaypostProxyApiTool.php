@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Mcp\Support\WaypostMcpApiResponse;
 use App\Support\WaypostMcpInternalApi;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use InvalidArgumentException;
@@ -53,19 +54,7 @@ class WaypostProxyApiTool extends Tool
             return Response::error('Failed to call the Waypost API.');
         }
 
-        $raw = $symfony->getContent();
-        $status = $symfony->getStatusCode();
-
-        $decoded = json_decode($raw, true);
-        if (json_last_error() === JSON_ERROR_NONE && (is_array($decoded) || is_object($decoded))) {
-            $raw = json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        }
-
-        if ($status >= 400) {
-            return Response::error($raw !== '' ? $raw : 'HTTP '.$status);
-        }
-
-        return Response::text($raw !== '' ? $raw : 'HTTP '.$status);
+        return WaypostMcpApiResponse::fromSymfony($symfony);
     }
 
     /**

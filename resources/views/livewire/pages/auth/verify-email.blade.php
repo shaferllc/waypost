@@ -36,9 +36,9 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Verify email') }}</h1>
-        <p class="mt-2 text-sm text-ink/70 leading-relaxed">
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{{ __('Verify email') }}</h1>
+        <p class="mt-2 text-sm leading-relaxed text-ink/60">
             {{ __('Thanks for signing up! Before you continue, please verify your email using the link we sent. If you did not receive it, we can send another.') }}
         </p>
     </div>

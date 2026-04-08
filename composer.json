@@ -20,6 +20,7 @@
     ],
     "require": {
         "php": "^8.3",
+        "blade-ui-kit/blade-heroicons": "^2.7",
         "chillerlan/php-qrcode": "^6.0",
         "dply/fleet-operator": "^1.0",
         "laravel/framework": "^13.0",

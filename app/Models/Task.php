@@ -25,6 +25,9 @@ use Illuminate\Support\Carbon;
     'starts_at',
     'ends_at',
     'planning_status',
+    'value_level',
+    'effort_level',
+    'eisenhower_quadrant',
     'tags',
 ])]
 class Task extends Model
@@ -60,6 +63,39 @@ class Task extends Model
     public const PRIORITY_NORMAL = 2;
 
     public const PRIORITY_HIGH = 3;
+
+    public const MATRIX_LOW = 'low';
+
+    public const MATRIX_MEDIUM = 'medium';
+
+    public const MATRIX_HIGH = 'high';
+
+    /**
+     * @var list<string>
+     */
+    public const MATRIX_LEVELS = [
+        self::MATRIX_LOW,
+        self::MATRIX_MEDIUM,
+        self::MATRIX_HIGH,
+    ];
+
+    public const EISENHOWER_DO_FIRST = 'do_first';
+
+    public const EISENHOWER_SCHEDULE = 'schedule';
+
+    public const EISENHOWER_DELEGATE = 'delegate';
+
+    public const EISENHOWER_ELIMINATE = 'eliminate';
+
+    /**
+     * @var list<string>
+     */
+    public const EISENHOWER_QUADRANTS = [
+        self::EISENHOWER_DO_FIRST,
+        self::EISENHOWER_SCHEDULE,
+        self::EISENHOWER_DELEGATE,
+        self::EISENHOWER_ELIMINATE,
+    ];
 
     protected function casts(): array
     {

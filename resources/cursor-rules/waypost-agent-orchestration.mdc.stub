@@ -1,0 +1,28 @@
+---
+description: Use Waypost MCP to list work, let the user choose, then create or update tasks
+alwaysApply: false
+---
+
+# Waypost — plan work with the user (MCP)
+
+This repo is linked to **Waypost** project **__PROJECT_NAME__** (id `__PROJECT_ID__`).
+
+## Goals
+
+1. **Discover** — Use **`waypost_list_projects`** (Profile token) or assume project **`__PROJECT_ID__`** when using a project-scoped token. Use **`waypost_get_project`** for themes and roadmap versions.
+2. **What is left** — Call **`waypost_list_tasks`** with `open_only: true` or `exclude_status: done`, or filter by `status`, `version_id`, `planning_status`.
+3. **Choose** — Present a **numbered list** of options or tasks. Wait for the user to pick numbers or titles.
+4. **Act** — Use **`waypost_create_task`** / **`waypost_update_task`**, or **`waypost_create_project`** with **`issue_sync_token: true`** when the user wants a new project **and** this repo wired up (write returned **`waypost_json`** to **`waypost.json`**, set **`WAYPOST_API_TOKEN`** to **`sync_token`**).
+
+## Tokens
+
+- **Project token** (from Sync): only this project’s id in API paths.
+- **Profile token** (Profile → API tokens): list/create projects and work across projects — set as **`WAYPOST_API_TOKEN`** for MCP.
+
+## Logging (optional)
+
+Use **`waypost_log_agent_phase`** with `project_id`: **`__PROJECT_ID__`** and `phase` **start** / **end** around substantive assist turns.
+
+## Fallback
+
+If a tool is unavailable, use **`waypost_http_request`** with the same Bearer token against `/api/...` paths documented in the app **API docs**.

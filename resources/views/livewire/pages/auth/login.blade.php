@@ -99,9 +99,9 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Log in') }}</h1>
-        <p class="mt-1 text-sm text-ink/70">{{ __('Welcome back to :app.', ['app' => config('app.name')]) }}</p>
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{{ __('Log in') }}</h1>
+        <p class="mt-2 text-sm leading-relaxed text-ink/60">{{ __('Welcome back to :app.', ['app' => config('app.name')]) }}</p>
     </div>
 
     <x-auth-session-status class="mb-4" :status="session('status')" />

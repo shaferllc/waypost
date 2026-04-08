@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\User;
 use App\Services\ProjectCursorTokenIssuer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ProjectScopedTokenApiTest extends TestCase
@@ -87,5 +88,32 @@ class ProjectScopedTokenApiTest extends TestCase
             ])
             ->assertForbidden()
             ->assertJsonFragment(['message' => 'Project-scoped tokens cannot create projects.']);
+    }
+
+    public function test_create_project_with_issue_sync_token_returns_manifest_and_token(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/projects', [
+            'name' => 'Bootstrapped',
+            'issue_sync_token' => true,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.name', 'Bootstrapped')
+            ->assertJsonStructure([
+                'data' => ['id', 'name'],
+                'sync_token',
+                'waypost_json',
+                'cursor_mcp_install_url',
+                '_bootstrap_hint',
+            ]);
+
+        $this->assertIsString($response->json('sync_token'));
+        $this->assertStringContainsString('|', (string) $response->json('sync_token'));
+        $this->assertStringContainsString('"project_id"', (string) $response->json('waypost_json'));
+        $this->assertStringContainsString('api_token', (string) $response->json('waypost_json'));
+        $this->assertStringStartsWith('cursor://', (string) $response->json('cursor_mcp_install_url'));
     }
 }

@@ -16,39 +16,15 @@
                 \App\Models\Task::PLANNING_BEHIND => 'Behind',
                 \App\Models\Task::PLANNING_BLOCKED => 'Blocked',
             ];
-            $tlTasks = $project->tasks->filter(fn ($t) => $t->initiativeStart() && $t->initiativeEnd())->values();
-            $rangeStart = null;
-            $rangeEnd = null;
-            foreach ($tlTasks as $t) {
-                $s = $t->initiativeStart();
-                $e = $t->initiativeEnd();
-                if ($s && ($rangeStart === null || $s->lt($rangeStart))) {
-                    $rangeStart = $s->copy()->startOfDay();
-                }
-                if ($e && ($rangeEnd === null || $e->gt($rangeEnd))) {
-                    $rangeEnd = $e->copy()->endOfDay();
-                }
-            }
-            if ($rangeStart && $rangeEnd) {
-                $timelineStart = $rangeStart->copy()->startOfMonth();
-                $timelineEnd = $rangeEnd->copy()->endOfMonth();
-                $totalDays = max(1, $timelineStart->diffInDays($timelineEnd) + 1);
-                $monthCursor = $timelineStart->copy();
-                $monthLabels = [];
-                while ($monthCursor->lte($timelineEnd)) {
-                    $monthLabels[] = $monthCursor->copy();
-                    $monthCursor->addMonth()->startOfMonth();
-                }
-            } else {
-                $timelineStart = null;
-                $totalDays = 1;
-                $monthLabels = [];
-            }
+            $pubTimelineTasks = $project->tasks->filter(fn ($t) => $t->initiativeStart() && $t->initiativeEnd())->values();
         @endphp
         <div class="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
             <div class="max-w-4xl mx-auto space-y-10">
                 <header>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-ink/50">Shared roadmap</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-ink/50 inline-flex items-center gap-1.5">
+                        <x-waypost-icon name="roadmap" class="h-3.5 w-3.5" />
+                        Shared roadmap
+                    </p>
                     <h1 class="mt-1 text-3xl font-bold tracking-tight">{{ $project->name }}</h1>
                     @if ($shareName)
                         <p class="mt-1 text-sm text-ink/60">{{ $shareName }}</p>
@@ -60,7 +36,10 @@
 
                 @if ($project->okrGoals->isNotEmpty())
                     <section class="rounded-2xl border border-cream-300 bg-white p-6 shadow-sm">
-                        <h2 class="text-lg font-semibold text-ink">Goals &amp; OKRs</h2>
+                        <h2 class="text-lg font-semibold text-ink inline-flex items-center gap-2">
+                            <x-waypost-icon name="okrs" class="h-5 w-5 text-sage-dark/80" />
+                            Goals &amp; OKRs
+                        </h2>
                         <p class="mt-1 text-sm text-ink/55">High-level objectives and measurable key results (read-only).</p>
                         <div class="mt-6 space-y-6">
                             @foreach ($project->okrGoals as $goal)
@@ -89,41 +68,19 @@
                     </section>
                 @endif
 
-                @if ($timelineStart && $tlTasks->isNotEmpty())
+                @if ($pubTimelineTasks->isNotEmpty())
                     <section class="rounded-2xl border border-cream-300 bg-white p-6 shadow-sm">
-                        <h2 class="text-lg font-semibold text-ink">Initiative timeline</h2>
+                        <h2 class="text-lg font-semibold text-ink inline-flex items-center gap-2">
+                            <x-waypost-icon name="timeline" class="h-5 w-5 text-sage-dark/80" />
+                            Initiative timeline
+                        </h2>
                         <p class="mt-1 text-sm text-ink/55">Scheduled work with start/end dates (or inferred from due dates).</p>
-                        <div class="mt-6 space-y-2">
-                            <div class="flex ps-[11rem] pe-1">
-                                @foreach ($monthLabels as $m)
-                                    <div class="flex-1 min-w-0 border-l border-cream-200 px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-ink/50">
-                                        {{ $m->format('M') }}
-                                    </div>
-                                @endforeach
-                            </div>
-                            @foreach ($tlTasks as $tt)
-                                @php
-                                    $ts = $tt->initiativeStart()->startOfDay();
-                                    $te = $tt->initiativeEnd()->endOfDay();
-                                    $leftPct = min(100, max(0, ($timelineStart->diffInDays($ts) / $totalDays) * 100));
-                                    $spanDays = max(1, $ts->diffInDays($te) + 1);
-                                    $widthPct = min(100 - $leftPct, max(0.8, ($spanDays / $totalDays) * 100));
-                                    $blocked = $tt->linksAsTarget->isNotEmpty();
-                                @endphp
-                                <div class="flex items-center gap-3 text-sm">
-                                    <span class="w-44 shrink-0 truncate text-xs font-medium text-ink" title="{{ $tt->title }}">{{ $tt->title }}</span>
-                                    <div class="relative h-7 min-w-0 flex-1 rounded-md {{ $blocked ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-cream-100' }}">
-                                        <div
-                                            class="absolute top-1 bottom-1 rounded-md {{ $blocked ? 'bg-amber-600' : 'bg-sage' }} shadow-sm"
-                                            style="left: {{ $leftPct }}%; width: {{ $widthPct }}%; min-width: 4px;"
-                                        ></div>
-                                    </div>
-                                </div>
-                            @endforeach
+                        <div class="mt-6">
+                            @include('partials.task-initiative-timeline', [
+                                'tasks' => $project->tasks,
+                                'interactive' => false,
+                            ])
                         </div>
-                        @if ($tlTasks->contains(fn ($t) => $t->linksAsTarget->isNotEmpty()))
-                            <p class="mt-4 text-xs text-ink/55"><span class="inline-block h-2 w-2 rounded-sm bg-amber-600 align-middle"></span> Amber rows have blocking dependencies.</p>
-                        @endif
                     </section>
                 @elseif ($project->tasks->isNotEmpty())
                     <section class="rounded-xl border border-dashed border-cream-300 bg-cream-50/80 p-5 text-sm text-ink/60">
@@ -133,7 +90,10 @@
                 @endif
 
                 <section>
-                    <h2 class="text-lg font-semibold text-ink">Versions &amp; milestones</h2>
+                    <h2 class="text-lg font-semibold text-ink inline-flex items-center gap-2">
+                        <x-waypost-icon name="flag" class="h-5 w-5 text-sage-dark/80" />
+                        Versions &amp; milestones
+                    </h2>
                     <p class="mt-1 text-sm text-ink/55">Planned releases and the work tied to each.</p>
                     <div class="relative mt-6 space-y-6 pl-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-cream-300">
                         @foreach ($project->versions as $version)

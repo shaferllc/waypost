@@ -47,9 +47,9 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ __('Create account') }}</h1>
-        <p class="mt-1 text-sm text-ink/70">{{ __('Start organizing projects on :app.', ['app' => config('app.name')]) }}</p>
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{{ __('Create account') }}</h1>
+        <p class="mt-2 text-sm leading-relaxed text-ink/60">{{ __('Start organizing projects on :app.', ['app' => config('app.name')]) }}</p>
     </div>
 
     @if (session('oauth_error'))
@@ -67,7 +67,7 @@ new #[Layout('layouts.guest')] class extends Component
                     <div class="w-full border-t border-cream-300"></div>
                 </div>
                 <div class="relative flex justify-center text-xs uppercase tracking-wide">
-                    <span class="bg-cream-50 px-3 text-ink/55">{{ __('Or with email') }}</span>
+                    <span class="bg-white px-3 text-ink/55">{{ __('Or with email') }}</span>
                 </div>
             </div>
         @endif

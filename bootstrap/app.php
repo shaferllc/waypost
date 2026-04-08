@@ -23,6 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Streamable HTTP MCP POSTs must never require a browser CSRF token. Some clients send a
+        // stateful Origin/Referer so Sanctum or the web stack can still run CSRF — exclude mcp/*.
+        $middleware->preventRequestForgery(except: [
+            'mcp/*',
+        ]);
+
         // PNA-only OPTIONS (no Access-Control-Request-Method) must not reach routing (405).
         // Prepend Respond… after AddMcp so array_unshift puts Respond first (runs outermost).
         $middleware->prepend(AddMcpPrivateNetworkAccessHeader::class);

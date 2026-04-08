@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy from your Waypost project → Sync (Download waypost.json) or paste fields manually. Use the project that tracks THIS app’s work (e.g. named Waypost), not other products. Never commit api_token.",
+  "api_base": "https://waypost.test",
+  "mcp_url": "https://waypost.test/mcp/waypost",
+  "mcp_enabled": true,
+  "project_id": 0,
+  "project_name": "Waypost",
+  "x_waypost_source": "ai",
+  "supported_agent_types": [
+    "cursor",
+    "claude_code",
+    "ai"
+  ]
+}

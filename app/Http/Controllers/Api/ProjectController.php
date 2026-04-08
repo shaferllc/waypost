@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\EnforceProjectScopedSanctumToken;
 use App\Models\Project;
 use App\Services\ChangelogRecorder;
+use App\Services\ProjectCursorTokenIssuer;
+use App\Support\WaypostCursorArtifacts;
+use App\Support\WaypostMcpInternalApi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -39,7 +42,8 @@ class ProjectController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        if (EnforceProjectScopedSanctumToken::scopedProjectIdFromToken($request->user()->currentAccessToken()) !== null) {
+        $scoped = EnforceProjectScopedSanctumToken::scopedProjectIdFromToken($request->user()->currentAccessToken()) !== null;
+        if ($scoped && ! WaypostMcpInternalApi::isInternalDispatch()) {
             abort(403, 'Project-scoped tokens cannot create projects.');
         }
 
@@ -49,9 +53,16 @@ class ProjectController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'url' => ['nullable', 'url', 'max:2048'],
+            'issue_sync_token' => ['sometimes', 'boolean'],
         ]);
 
-        $project = $request->user()->projects()->create($validated);
+        $issueSyncToken = $request->boolean('issue_sync_token');
+
+        $project = $request->user()->projects()->create([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'url' => $validated['url'] ?? null,
+        ]);
 
         app(ChangelogRecorder::class)->record(
             $request->user(),
@@ -62,7 +73,7 @@ class ProjectController extends Controller
             $request->header('X-Waypost-Source'),
         );
 
-        return response()->json([
+        $payload = [
             'data' => [
                 'id' => $project->id,
                 'name' => $project->name,
@@ -72,7 +83,18 @@ class ProjectController extends Controller
                 'archived_at' => $project->archived_at?->toIso8601String(),
                 'created_at' => $project->created_at?->toIso8601String(),
             ],
-        ], 201);
+        ];
+
+        if ($issueSyncToken) {
+            $plain = app(ProjectCursorTokenIssuer::class)->issue($project, $request->user());
+            WaypostCursorArtifacts::flashCursorSetupToken($project->id, $plain);
+            $payload['sync_token'] = $plain;
+            $payload['waypost_json'] = WaypostCursorArtifacts::manifestJson($project, true, $plain);
+            $payload['cursor_mcp_install_url'] = WaypostCursorArtifacts::cursorMcpInstallUrl($plain);
+            $payload['_bootstrap_hint'] = 'Write `waypost_json` to repo-root `waypost.json` (gitignored). Set Cursor MCP env `WAYPOST_API_TOKEN` to `sync_token`, or open `cursor_mcp_install_url` once. Remove `api_token` from committed files.';
+        }
+
+        return response()->json($payload, 201);
     }
 
     public function show(Request $request, Project $project): JsonResponse

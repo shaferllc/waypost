@@ -1,6 +1,8 @@
 *.log
 .DS_Store
 .env
+# Local Waypost manifest (may contain api_token); example is waypost.json.example
+/waypost.json
 .env.backup
 .env.production
 .phpactor.json

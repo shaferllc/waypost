@@ -2,9 +2,11 @@
 
 In the app (signed in): open **API docs** in the top nav or go to `/docs/api`.
 
-**Cursor / MCP:** Waypost exposes MCP over **HTTPS** at **`{public_base_url}/mcp/waypost`** (see **`mcp_url`** and **`mcp_enabled`** in downloadable **waypost.json**). Set **`WAYPOST_MCP_ENABLED=false`** in the app `.env` to turn off POST **`/mcp/waypost`** (returns **503 JSON**); **`GET /mcp/waypost/reachable`** and **`GET /api/mcp/status`** still report whether MCP is enabled. Point your editor’s remote MCP config at that URL with **`Authorization: Bearer`** and your **project** Sanctum token (e.g. set **`WAYPOST_API_TOKEN`** in the environment and reference it in MCP headers). Missing or wrong tokens produce **401** in app logs (`waypost.mcp.http` with `status`: 401, `user_id`: null). Generated config also sets **`Accept: application/json, text/event-stream`** and **`MCP-Protocol-Version`** so Streamable HTTP clients negotiate correctly; the app normalizes **`Accept`** on this route so unauthenticated calls return **401 JSON** instead of an HTML login redirect. If the editor logs an **SSE fallback** with **405** on **GET**, that is normal for this server (optional GET stream is not enabled); fix any **POST** errors first (token, **`APP_URL` / `WAYPOST_PUBLIC_URL`**, HTTPS). The **`waypost_http_request`** tool performs **GET/POST/PATCH/DELETE** against **`/api/...`** using the same Bearer token; direct API calls from other clients still use **`WAYPOST_BASE_URL`** (or **`api_base`** in **waypost.json**) plus **`X-Waypost-Source`** on mutating requests (**`waypost.json`** → **`x_waypost_source`**, default **`ai`**).
+**Cursor / MCP:** Waypost exposes MCP over **HTTPS** at **`{public_base_url}/mcp/waypost`** (see **`mcp_url`** and **`mcp_enabled`** in downloadable **waypost.json**). Set **`WAYPOST_MCP_ENABLED=false`** in the app `.env` to turn off POST **`/mcp/waypost`** (returns **503 JSON**); **`GET /mcp/waypost/reachable`** and **`GET /api/mcp/status`** still report whether MCP is enabled. Point your editor’s remote MCP config at that URL with **`Authorization: Bearer`** and a Sanctum token: use a **project** token from the project **Sync** tab for single-project workflows, or a **Profile → API token** to list/create projects and work across projects (set **`WAYPOST_API_TOKEN`** in the environment — **Profile** has a **Copy MCP config** block). Missing or wrong tokens produce **401** in app logs (`waypost.mcp.http` with `status`: 401, `user_id`: null). Generated config also sets **`Accept: application/json, text/event-stream`** and **`MCP-Protocol-Version`** so Streamable HTTP clients negotiate correctly; the app normalizes **`Accept`** on this route so unauthenticated calls return **401 JSON** instead of an HTML login redirect. If the editor logs an **SSE fallback** with **405** on **GET**, that is normal for this server (optional GET stream is not enabled); fix any **POST** errors first (token, **`APP_URL` / `WAYPOST_PUBLIC_URL`**, HTTPS). MCP includes convenience tools (**`waypost_list_projects`**, **`waypost_list_tasks`**, **`waypost_create_task`**, **`waypost_update_task`**, **`waypost_log_agent_phase`**, etc.) plus low-level **`waypost_http_request`** for **GET/POST/PATCH/DELETE** against **`/api/...`**; direct API calls from other clients still use **`WAYPOST_BASE_URL`** (or **`api_base`** in **waypost.json**) plus **`X-Waypost-Source`** on mutating requests (**`waypost.json`** → **`x_waypost_source`**, default **`ai`**).
 
 Personal API for your account: **full CRUD** on **projects**, **roadmap versions**, **roadmap themes**, **pinned links**, **wishlist ideas**, and **tasks** (including **OKR links**, **initiative dates**, and **planning status**). All routes require a **Sanctum personal access token** (Bearer).
+
+**Multiple projects in one account:** A **project-scoped** token is tied to **one** `project_id`. If you use MCP or automation for a specific codebase, use the token from **that** project’s Sync tab (see repo-root **`waypost.json.example`**) so tasks and API calls target the right project—not another product’s token.
 
 The **browser UI** can refresh in near real time when **Laravel Reverb** is configured (`BROADCAST_CONNECTION=reverb`, `composer run reverb` or `php artisan reverb:start`, and `VITE_REVERB_*` in `.env`). The API itself stays HTTP; Reverb only pushes lightweight `project.{id}` events to open project pages. See **`docs/reverb-production.md`** for a second-terminal dev workflow and production notes.
 
@@ -20,7 +22,7 @@ Each project can have a **scoped** token created automatically when you create t
 
 Download **`waypost.json`** from the project page for `api_base`, **`mcp_url`**, `project_id`, and **`x_waypost_source`** (default `ai` — send that value as **`X-Waypost-Source`** on mutating API calls so edits appear in the project **Recent activity** and changelog). You can paste the token into MCP as `WAYPOST_API_TOKEN`, or add an `api_token` field to `waypost.json` **locally** — do **not** commit secrets. On the server, override the default label with **`WAYPOST_MANIFEST_X_WAYPOST_SOURCE`** in `.env` if needed.
 
-In the web UI, **Download Cursor setup (ZIP)** (signed-in project page) bundles `waypost.json`, **`.cursor/rules/waypost-agent-activity.mdc`**, and a README — extract to your repo root, then add the token and merge **Copy MCP config** into Cursor’s MCP settings.
+In the web UI, **Download Cursor setup (ZIP)** (signed-in project page) bundles `waypost.json`, **`.cursor/rules/waypost-agent-activity.mdc`**, **`.cursor/rules/waypost-agent-orchestration.mdc`**, and a README — extract to your repo root, then add the token and merge **Copy MCP config** into Cursor’s MCP settings.
 
 ### General token (Profile)
 
@@ -92,7 +94,18 @@ If you are not another user’s collaborator, requests for someone else’s `pro
 
 ### Create, update, and delete a project
 
-`POST /api/projects` — JSON: `name` (required), optional `description`, `url`. Returns `201` with `data`. **Project-scoped tokens cannot create projects** (403, message: `Project-scoped tokens cannot create projects.`).
+`POST /api/projects` — JSON: `name` (required), optional `description`, `url`, optional **`issue_sync_token`** (boolean). Returns `201` with `data`. **Project-scoped tokens** get **403** on direct HTTP calls (`Project-scoped tokens cannot create projects.`). Creating a project with a project-scoped token **is** allowed when the call runs **inside Waypost MCP** (Streamable HTTP `waypost_create_project` / `waypost_http_request`), not when calling the JSON API from curl or other clients with only that token.
+
+When **`issue_sync_token` is `true`**, the response also includes (one-time bootstrap for editors / local repos):
+
+| Field | Notes |
+|-------|--------|
+| `sync_token` | Plaintext Sanctum token scoped to the **new** project (same as Sync tab). Use as `WAYPOST_API_TOKEN` for MCP. |
+| `waypost_json` | Pretty-printed JSON string: write to repo-root **`waypost.json`** (keep gitignored). Includes `api_token`; do not commit. |
+| `cursor_mcp_install_url` | Optional one-click Cursor MCP install for this token. |
+| `_bootstrap_hint` | Short reminder for agents and humans. |
+
+If `issue_sync_token` is omitted or false, those extra keys are not returned.
 
 `PATCH /api/projects/{project}` — optional `name`, `description`, `url`, `archived_at` (nullable date).
 
@@ -152,7 +165,16 @@ curl -sS -X POST "https://your-domain.test/api/projects/1/wishlist-items" \
 
 ### List and get
 
-`GET /api/projects/{project}/tasks` — all tasks for the project (task payload per row).
+`GET /api/projects/{project}/tasks` — tasks for the project (task payload per row). Optional **query** filters (combine as needed):
+
+| Query | Notes |
+|-------|--------|
+| `open_only` | `true` — exclude tasks with `status` **done** |
+| `status` | Comma-separated kanban statuses, e.g. `todo,in_progress`, or repeat `status[]` for multiple values |
+| `exclude_status` | Comma-separated statuses to omit (e.g. `done`) |
+| `version_id` | Filter by roadmap version id |
+| `theme_id` | Filter by theme id |
+| `planning_status` | One of `on_time`, `in_progress`, `not_started`, `behind`, `blocked` |
 
 `GET /api/projects/{project}/tasks/{task}` — one task; if the task belongs to another project, **404**.
 
@@ -175,6 +197,9 @@ curl -sS -X POST "https://your-domain.test/api/projects/1/wishlist-items" \
 | `planning_status`     | no       | one of: `on_time`, `in_progress`, `not_started`, `behind`, `blocked` |
 | `okr_objective_id`    | no       | must be an objective whose parent goal belongs to this project |
 | `tags`                | no       | array of strings (max 64 chars each) |
+| `value_level`         | no       | Value × Effort matrix: `low`, `medium`, or `high` |
+| `effort_level`        | no       | Value × Effort matrix: `low`, `medium`, or `high` |
+| `eisenhower_quadrant` | no       | `do_first`, `schedule`, `delegate`, or `eliminate` |
 
 New tasks are appended to the end of the chosen **status** column (same ordering rules as the web UI).
 
@@ -226,7 +251,7 @@ curl -sS -X PATCH "https://your-domain.test/api/projects/1/tasks/12" \
   }'
 ```
 
-**Response `data`** includes: `id`, `project_id`, `version_id`, `theme_id`, `assigned_to`, `title`, `body`, `status`, `position`, `priority`, `due_date`, `starts_at`, `ends_at`, `planning_status`, `okr_objective_id`, `tags`, `updated_at`.
+**Response `data`** includes: `id`, `project_id`, `version_id`, `theme_id`, `assigned_to`, `title`, `body`, `status`, `position`, `priority`, `due_date`, `starts_at`, `ends_at`, `planning_status`, `value_level`, `effort_level`, `eisenhower_quadrant`, `okr_objective_id`, `tags`, `updated_at`.
 
 ### 5c. Delete a task
 
